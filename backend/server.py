@@ -233,6 +233,7 @@ async def create_order(body: CreateOrderRequest, request: Request):
     }
     await db.orders.insert_one(doc)
     doc.pop('_id', None)
+    asyncio.create_task(send_order_placed_emails(doc))
     return doc
 
 
@@ -472,8 +473,10 @@ async def cashfree_webhook(request: Request):
             fresh = await db.orders.find_one({'order_id': order_id}, {'_id': 0})
             if fresh:
                 await _send_whatsapp_confirmation(fresh)
+                is_full = set_fields.get('payment_status') == 'SUCCESS'
+                asyncio.create_task(send_payment_received_emails(fresh, paid_now, is_full))
         except Exception as e:
-            logger.error(f'WhatsApp send failed: {e}')
+            logger.error(f'Post-payment notifications failed: {e}')
 
     return {'ok': True, 'payment_status': mapped, 'installment': installment,
             'paid_amount': new_paid, 'balance_due': max(total - new_paid, 0)}
@@ -574,10 +577,141 @@ async def whatsapp_chat_link(message: Optional[str] = None, phone: Optional[str]
 # ==================== AI Chatbot ====================
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 import re
+import asyncio
+import resend
 
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 AI_MODEL = os.environ.get('AI_MODEL', 'gpt-5.2')
 SUPPORT_PHONE = os.environ.get('SUPPORT_PHONE', '+919667788175')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'orders@kalakritishop.in')
+SENDER_NAME = os.environ.get('SENDER_NAME', 'Kalakriti')
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+
+async def _send_email(to: List[str], subject: str, html: str) -> None:
+    """Fire-and-forget email send. Logs errors, never raises."""
+    if not RESEND_API_KEY:
+        logger.info(f'[email skipped — RESEND_API_KEY not set] to={to} subject={subject}')
+        return
+    try:
+        params = {
+            'from': f'{SENDER_NAME} <{SENDER_EMAIL}>',
+            'to': [e for e in to if e],
+            'subject': subject,
+            'html': html,
+        }
+        if not params['to']:
+            return
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Email sent id={result.get('id')} to={to} subject={subject}")
+    except Exception as e:
+        logger.error(f'Resend email failed: {e}')
+
+
+def _order_email_html(order: dict, heading: str, intro: str, cta_url: Optional[str] = None,
+                      cta_label: Optional[str] = None) -> str:
+    items = order.get('items') or []
+    items_html = ''.join(
+        f"<tr><td style='padding:6px 10px;border-bottom:1px solid #eee'>{i.get('medium','')} · {i.get('size','')} · {i.get('faces',1)} face(s)</td></tr>"
+        for i in items
+    )
+    cta_html = ''
+    if cta_url and cta_label:
+        cta_html = f"""<div style="text-align:center;margin:24px 0">
+            <a href="{cta_url}" style="background:#C9A84C;color:#2C1810;text-decoration:none;padding:12px 28px;border-radius:4px;font-weight:600;font-family:Georgia,serif">{cta_label}</a>
+        </div>"""
+    return f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:#FAF6F0;font-family:Georgia,serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#FAF6F0;padding:32px 16px">
+  <tr><td align="center">
+    <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #E0D5C8;border-radius:12px;overflow:hidden">
+      <tr><td style="background:#2C1810;padding:20px 28px">
+        <div style="color:#C9A84C;font-size:11px;letter-spacing:3px;text-transform:uppercase">Kalakriti</div>
+        <div style="color:#FAF6F0;font-size:12px;margin-top:4px">Handcrafted Portraits · India</div>
+      </td></tr>
+      <tr><td style="padding:28px">
+        <h1 style="color:#2C1810;font-size:24px;margin:0 0 8px">{heading}</h1>
+        <p style="color:#3D3530;font-size:14px;line-height:1.6;margin:0 0 20px">{intro}</p>
+        <div style="background:#FAF6F0;border-radius:8px;padding:18px;margin-bottom:18px">
+          <p style="color:#9C8878;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Order</p>
+          <p style="color:#2C1810;font-size:20px;font-weight:600;margin:0 0 12px">{order.get('order_id','')}</p>
+          <table width="100%" style="border-collapse:collapse;font-size:13px;color:#3D3530">
+            {items_html}
+          </table>
+          <table width="100%" style="border-collapse:collapse;font-size:13px;color:#3D3530;margin-top:12px">
+            <tr><td>Total amount</td><td align="right" style="color:#2C1810;font-weight:600">₹{order.get('amount',0)}</td></tr>
+            <tr><td>Paid so far</td><td align="right" style="color:#2C1810;font-weight:600">₹{order.get('paid_amount',0)}</td></tr>
+            <tr><td>Balance due</td><td align="right" style="color:#C9A84C;font-weight:600">₹{order.get('balance_due',0)}</td></tr>
+          </table>
+        </div>
+        {cta_html}
+        <p style="color:#9C8878;font-size:12px;line-height:1.6;margin:20px 0 0">
+          Need help? Reply to this email or call us at <a href="tel:{SUPPORT_PHONE}" style="color:#2C1810">{SUPPORT_PHONE}</a>.
+        </p>
+      </td></tr>
+      <tr><td style="background:#FAF6F0;padding:16px 28px;text-align:center;color:#9C8878;font-size:11px">
+        © Kalakriti · Handcrafted by verified Indian artists
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>"""
+
+
+async def send_order_placed_emails(order: dict) -> None:
+    front = os.environ.get('FRONTEND_URL', '').rstrip('/')
+    pay_url = f"{front}/pay?order_id={order.get('order_id')}" if front else ''
+    cust_html = _order_email_html(
+        order,
+        heading=f"Order received, {order.get('customer_name','').split(' ')[0]} ji!",
+        intro="Thank you for choosing Kalakriti. Our verified artists are reviewing your reference photo. Here's a summary of your order:",
+        cta_url=pay_url,
+        cta_label='Complete Payment' if pay_url else None,
+    )
+    await _send_email([order.get('customer_email')],
+                      f"Order received · {order.get('order_id')} · Kalakriti",
+                      cust_html)
+    # Admin
+    via = order.get('placed_via', 'website')
+    admin_html = _order_email_html(
+        order,
+        heading=f"New order · {order.get('order_id')}",
+        intro=f"Placed via <b>{via}</b> by {order.get('customer_name')} ({order.get('customer_email')}, {order.get('customer_phone')}). Shipping: {order.get('shipping_address')}",
+    )
+    for adm in ADMIN_EMAILS:
+        await _send_email([adm], f"[Kalakriti] New order {order.get('order_id')}", admin_html)
+
+
+async def send_payment_received_emails(order: dict, amount_paid: float, is_full: bool) -> None:
+    front = os.environ.get('FRONTEND_URL', '').rstrip('/')
+    track_url = f"{front}/track-order?order_id={order.get('order_id')}" if front else ''
+    kind = 'Payment received' if is_full else 'Advance payment received'
+    intro_cust = (
+        f"We've received <b>₹{amount_paid}</b>. Your portrait is moving to the artist's queue now. "
+        + ("This completes your payment 🎉" if is_full else
+           f"Balance of ₹{order.get('balance_due',0)} will be due once we share the final draft for your approval.")
+    )
+    cust_html = _order_email_html(
+        order,
+        heading=f"{kind} ✓",
+        intro=intro_cust,
+        cta_url=track_url,
+        cta_label='Track Your Order' if track_url else None,
+    )
+    await _send_email([order.get('customer_email')],
+                      f"{kind} · {order.get('order_id')} · Kalakriti",
+                      cust_html)
+    admin_html = _order_email_html(
+        order,
+        heading=f"{kind} · ₹{amount_paid}",
+        intro=f"Order {order.get('order_id')} — {order.get('customer_name')}. {'Full amount collected.' if is_full else 'Advance collected; balance pending.'}",
+    )
+    for adm in ADMIN_EMAILS:
+        await _send_email([adm], f"[Kalakriti] ₹{amount_paid} {'FULL' if is_full else 'ADVANCE'} · {order.get('order_id')}", admin_html)
+
+
+
 
 KALAKRITI_SYSTEM_PROMPT = """You are Kalakriti Sakhi, the friendly AI concierge for Kalakriti — a premium Indian handcrafted-portrait studio. You chat with customers in a warm, boutique, gently-Indian tone (light touches of "ji", "namaste" when natural; never overdone). Keep replies concise (under 120 words), use short paragraphs or bullets, and always sound human.
 
@@ -807,6 +941,7 @@ async def ai_chat(body: ChatRequest):
                 'chat_session_id': body.session_id,
             }
             await db.orders.insert_one(doc)
+            asyncio.create_task(send_order_placed_emails(doc))
             # Build checkout/payment URL — reuse existing return page flow
             payment_url = f'/pay?order_id={order_id}'
             cta = 'pay'
