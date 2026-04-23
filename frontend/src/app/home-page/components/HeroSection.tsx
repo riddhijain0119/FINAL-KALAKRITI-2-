@@ -238,7 +238,7 @@ export default function HeroSection() {
           
           {[
           '2,400+ portraits delivered',
-          '50-day money-back guarantee',
+          'Direct ship after completion',
           'No WhatsApp chaos — structured review',
           'Artist verified portfolios'].
           map((trust) =>

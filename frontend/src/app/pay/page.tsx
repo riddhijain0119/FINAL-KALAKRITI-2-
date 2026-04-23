@@ -26,10 +26,29 @@ export default function AIPayPage() {
   const router = useRouter();
   const params = useSearchParams();
   const orderId = params.get('order_id') || '';
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Auto-load order if this order was placed via Kalakriti Sakhi
+  useEffect(() => {
+    if (typeof window === 'undefined' || !orderId) return;
+    const sid = window.localStorage.getItem('kalakriti_chat_session');
+    if (!sid) return;
+    fetch(`${API_BASE}/api/chat/prefill?session_id=${encodeURIComponent(sid)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((pref) => {
+        if (!pref?.found || !pref.phone) return;
+        return fetch(
+          `${API_BASE}/api/orders/by-chat/${encodeURIComponent(orderId)}?phone=${encodeURIComponent(pref.phone)}`,
+        ).then((r) => (r.ok ? r.json() : null));
+      })
+      .then((o) => {
+        if (o && o.order_id) setOrder(o);
+      })
+      .catch(() => {});
+  }, [orderId]);
 
   const lookup = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -37,7 +56,7 @@ export default function AIPayPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${API_BASE}/api/orders/${encodeURIComponent(orderId)}?email=${encodeURIComponent(email)}`,
+        `${API_BASE}/api/orders/by-chat/${encodeURIComponent(orderId)}?phone=${encodeURIComponent(phone)}`,
       );
       if (!res.ok) throw new Error((await res.json())?.detail || 'Order not found');
       const o = await res.json();
@@ -123,15 +142,16 @@ export default function AIPayPage() {
             data-testid="pay-email-form"
           >
             <label className="font-body text-xs text-[#3D3530]">
-              Verify email used with Kalakriti Sakhi
+              Enter your phone number to confirm
             </label>
             <input
-              type="email"
+              type="tel"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              data-testid="pay-email-input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="10-digit mobile"
+              maxLength={14}
+              data-testid="pay-phone-input"
               className="mt-2 w-full bg-[#FAF6F0] border border-[#E0D5C8] rounded-sm px-3 py-2 font-body text-sm text-[#2C1810] focus:outline-none focus:border-[#C9A84C]"
             />
             {error && (

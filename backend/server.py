@@ -944,6 +944,20 @@ async def chat_image(image_id: str):
     return Response(content=raw, media_type=mime)
 
 
+@api_router.get('/orders/by-chat/{order_id}')
+async def get_order_by_chat(order_id: str, phone: str):
+    """Look up an AI-placed order by order_id + phone — used by /pay page
+    after AI Sakhi places the order, so we don't re-ask email."""
+    order = await db.orders.find_one({'order_id': order_id}, {'_id': 0})
+    if not order:
+        raise HTTPException(status_code=404, detail='Order not found')
+    want = ''.join(c for c in (phone or '') if c.isdigit())[-10:]
+    have = ''.join(c for c in (order.get('customer_phone') or '') if c.isdigit())[-10:]
+    if not want or want != have:
+        raise HTTPException(status_code=403, detail='Phone number does not match this order')
+    return order
+
+
 @api_router.get('/chat/history')
 async def chat_history(session_id: str):
     msgs = await db.chat_messages.find(

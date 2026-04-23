@@ -130,13 +130,7 @@ export default function LivePricePanel() {
           )}
         </AnimatePresence>
 
-        {/* Guarantee note */}
-        <div className="flex items-start gap-2 pt-2 border-t border-[hsl(var(--border))]">
-          <Info size={12} className="text-[#C9A84C] mt-0.5 flex-shrink-0" />
-          <p className="font-body text-xs text-[#9C8878]">
-            50-day satisfaction guarantee. Full refund if you're not delighted with your portrait.
-          </p>
-        </div>
+        {/* Guarantee note removed */}
       </div>
     </div>
   );
