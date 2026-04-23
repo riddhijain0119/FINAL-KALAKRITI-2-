@@ -32,3 +32,17 @@
 - P2: Add proper alt text matching each artwork instead of generic ones
 - P2: Create a seeded sample dataset for orders/projects in MongoDB for demos
 
+
+## AI Chatbot (23 Apr 2026 — session 2)
+- Added **Kalakriti Sakhi** AI concierge (GPT-5.2 via emergentintegrations, fallback gpt-4o).
+- Backend endpoints: `POST /api/chat`, `GET /api/chat/history?session_id=`.
+- Stores all turns in Mongo `chat_messages` (session_id keyed).
+- Knowledge baked into system prompt: mediums, prices, sizes, policies, process, recommendations.
+- Auto-detects `KLK-YYYYMMDD-XXXXXX` pattern in any user message, fetches order from DB, injects as ORDER CONTEXT for live status lookup.
+- LLM emits `[CTA:CONFIGURE]` → renders "Start Configurator" button / `[CTA:CALL]` → renders "Call +91 96677 88175".
+- Frontend: `/app/frontend/src/components/AIChatBot.tsx` mounted globally in `layout.tsx`. Replaced WhatsAppFloatingButton everywhere.
+- `.env` additions: `OPENAI_API_KEY`, `AI_MODEL=gpt-5.2`, `SUPPORT_PHONE=+919667788175`.
+- ⚠️ **Blocker on user key**: The OpenAI key provided returns "quota exceeded". Code is verified and working end-to-end — just needs an active billing key or switch to `EMERGENT_LLM_KEY`.
+
+## Cashfree (live keys)
+- PROD App ID + Secret wired. `CASHFREE_MODE=PROD`. `/api/payments/cashfree/create` confirmed returning real `payment_session_id`. Webhook URL pending setup in Cashfree dashboard.

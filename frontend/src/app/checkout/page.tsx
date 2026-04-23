@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
-import WhatsAppFloatingButton from '@/components/WhatsAppFloatingButton';
+// AI chat is mounted globally in layout.tsx
 import AppLogo from '@/components/ui/AppLogo';
 import { ArrowLeft, Loader2, Lock, Package } from 'lucide-react';
 
@@ -161,7 +161,7 @@ export default function CheckoutPage() {
           </form>
         </div>
       </div>
-      <WhatsAppFloatingButton />
+      
     </main>
   );
 }

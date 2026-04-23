@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { api, Order } from '@/lib/api';
 import Link from 'next/link';
 import AppLogo from '@/components/ui/AppLogo';
-import WhatsAppFloatingButton from '@/components/WhatsAppFloatingButton';
+// AI chat is mounted globally in layout.tsx
 import { Search, CheckCircle2, Truck, Package, Paintbrush, Clock } from 'lucide-react';
 import PayBalanceButton from '@/components/PayBalanceButton';
 
@@ -117,7 +117,7 @@ export default function TrackOrderPage() {
           </div>
         )}
       </div>
-      <WhatsAppFloatingButton />
+      
     </main>
   );
 }
