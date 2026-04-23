@@ -209,7 +209,6 @@ async def create_order(body: CreateOrderRequest, request: Request):
     now = datetime.now(timezone.utc)
     plan = body.payment_plan if body.payment_plan in ('full', 'advance_25') else 'full'
     advance_amount = round(body.amount * 0.25, 2) if plan == 'advance_25' else body.amount
-    balance_due = round(body.amount - advance_amount, 2)
     doc = {
         'order_id': order_id,
         'user_id': user['user_id'] if user else None,
