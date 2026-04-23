@@ -324,6 +324,8 @@ async def cashfree_create(order_id: str, installment: str = 'advance', request: 
     paid = float(order.get('paid_amount') or 0)
     total = float(order['amount'])
     advance = float(order.get('advance_amount') or total)
+    charge: float = 0.0
+    cf_oid: str = order_id
 
     if installment == 'balance':
         charge = round(total - paid, 2)
