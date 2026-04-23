@@ -54,7 +54,7 @@ export default function AIPayPage() {
     setLoading(true);
     try {
       const pay: any = await api(
-        `/api/payments/cashfree/create?order_id=${orderId}&installment=advance`,
+        `/api/payments/cashfree/create?order_id=${orderId}&installment=full`,
         { method: 'POST' },
       );
       if (pay.mock) {

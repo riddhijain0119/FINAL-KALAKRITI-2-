@@ -61,7 +61,7 @@ export default function CheckoutPage() {
         }),
       });
 
-      const pay: any = await api(`/api/payments/cashfree/create?order_id=${order.order_id}&installment=advance`, {
+      const pay: any = await api(`/api/payments/cashfree/create?order_id=${order.order_id}&installment=full`, {
         method: 'POST',
       });
 
@@ -120,30 +120,6 @@ export default function CheckoutPage() {
             <Input label="Number of Faces" type="number" value={String(form.faces)} onChange={(v) => setForm({ ...form, faces: Number(v) })} testId="input-faces" />
             <TextArea label="Special Instructions (optional)" value={form.notes} onChange={(v) => setForm({ ...form, notes: v })} testId="input-notes" />
 
-            {/* Payment plan selector */}
-            <div className="pt-2">
-              <p className="text-sm font-body font-medium text-[#3D3530] mb-2">Payment plan</p>
-              <div className="grid md:grid-cols-2 gap-3">
-                <PlanCard
-                  active={form.payment_plan === 'full'}
-                  onClick={() => setForm({ ...form, payment_plan: 'full' })}
-                  title="Pay in full"
-                  subtitle="One-time payment today"
-                  priceLine={`Pay now ₹${form.amount}`}
-                  testId="plan-full"
-                />
-                <PlanCard
-                  active={form.payment_plan === 'advance_25'}
-                  onClick={() => setForm({ ...form, payment_plan: 'advance_25' })}
-                  title="Pay 25% advance"
-                  subtitle="Lock your artist · balance on completion"
-                  priceLine={`Pay now ₹${Math.round(form.amount * 0.25)} · Balance ₹${form.amount - Math.round(form.amount * 0.25)}`}
-                  testId="plan-advance"
-                  highlight="Most popular"
-                />
-              </div>
-            </div>
-
             {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-sm px-3 py-2" data-testid="checkout-error">{error}</div>}
 
             <button
@@ -153,11 +129,9 @@ export default function CheckoutPage() {
               className="w-full flex items-center justify-center gap-2 bg-[#2C1810] text-[#FAF6F0] font-body font-medium py-3 rounded-sm hover:bg-[#1A0E09] transition-colors disabled:opacity-60"
             >
               {loading ? <Loader2 className="animate-spin" size={18} /> : <Lock size={16} />}
-              {loading ? 'Processing…' : form.payment_plan === 'advance_25'
-                ? `Pay 25% advance · ₹${Math.round(form.amount * 0.25)}`
-                : `Pay ₹${form.amount} with Cashfree`}
+              {loading ? 'Processing…' : `Pay ₹${form.amount} with Cashfree`}
             </button>
-            <p className="text-xs text-[#9C8878] text-center">You'll receive a WhatsApp confirmation after payment.</p>
+            <p className="text-xs text-[#9C8878] text-center">Full payment upfront · Portrait ships directly after completion · WhatsApp confirmation sent.</p>
           </form>
         </div>
       </div>
