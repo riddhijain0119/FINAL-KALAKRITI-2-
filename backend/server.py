@@ -952,6 +952,25 @@ async def chat_history(session_id: str):
     return {'session_id': session_id, 'messages': msgs, 'support_phone': SUPPORT_PHONE}
 
 
+@api_router.get('/chat/prefill')
+async def chat_prefill(session_id: str):
+    """Returns customer details from the most recent AI-placed order for this chat session,
+    so the portrait-configurator form can auto-fill name/email/phone/address."""
+    order = await db.orders.find_one(
+        {'chat_session_id': session_id}, {'_id': 0},
+        sort=[('created_at', -1)],
+    )
+    if not order:
+        return {'found': False}
+    return {
+        'found': True,
+        'name': order.get('customer_name', ''),
+        'email': order.get('customer_email', ''),
+        'phone': order.get('customer_phone', ''),
+        'address': order.get('shipping_address', ''),
+    }
+
+
 # ==================== Wire up ====================
 app.include_router(api_router)
 

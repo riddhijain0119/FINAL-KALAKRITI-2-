@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Check, Loader2, Lock, CreditCard, ArrowLeft } from 'lucide-react';
+import { Check, Loader2, Lock, CreditCard, ArrowLeft, Sparkles } from 'lucide-react';
 import { useWizardStore } from '@/lib/state/wizardStore';
 import { formatINR, getMediumLabel, getSizeLabel } from '@/lib/pricing/engine';
+import { API_BASE } from '@/lib/api';
 
 interface ContactForm {
   name: string;
@@ -34,12 +35,33 @@ export default function Step4QuoteSummary() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<ContactForm>();
+
+  // Auto-fill from AI chat session (if customer has been chatting with Sakhi)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sid = window.localStorage.getItem('kalakriti_chat_session');
+    if (!sid) return;
+    fetch(`${API_BASE}/api/chat/prefill?session_id=${encodeURIComponent(sid)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.found) {
+          if (d.name) setValue('name', d.name);
+          if (d.email) setValue('email', d.email);
+          if (d.phone) setValue('phone', d.phone);
+          if (d.address) setValue('address', d.address);
+          setPrefilled(true);
+        }
+      })
+      .catch(() => {});
+  }, [setValue]);
 
   const onSubmit = async (data: ContactForm) => {
     setIsSubmitting(true);
@@ -153,23 +175,23 @@ export default function Step4QuoteSummary() {
             <span className="font-body text-xs text-[#3D3530] tabular-nums">{formatINR(priceBreakdown.gst)}</span>
           </div>
           <div className="flex justify-between bg-[#FAF6F0] -mx-5 px-5 py-3 mt-2">
-            <span className="font-body text-sm font-600 text-[#2C1810]">Total</span>
+            <span className="font-body text-sm font-600 text-[#2C1810]">Total payable</span>
             <span className="font-display text-lg font-600 text-[#2C1810] tabular-nums">{formatINR(priceBreakdown.total)}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="font-body text-xs text-[#9C8878]">Pay now (50% deposit)</span>
-            <span className="font-body text-sm font-600 text-[#C9A84C] tabular-nums">{formatINR(priceBreakdown.depositAmount)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="font-body text-xs text-[#9C8878]">Balance on approval</span>
-            <span className="font-body text-xs text-[#9C8878] tabular-nums">{formatINR(priceBreakdown.balanceAmount)}</span>
-          </div>
+          <p className="font-body text-[11px] text-[#9C8878] pt-1">Full payment · Portrait ships directly after completion.</p>
         </div>
       </div>
 
       {/* Contact form */}
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-sm border border-[hsl(var(--border))] p-5 space-y-4">
-        <h3 className="font-body text-sm font-600 text-[#2C1810] mb-2">Delivery Details</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-body text-sm font-600 text-[#2C1810]">Delivery Details</h3>
+          {prefilled && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-body text-[#C9A84C]">
+              <Sparkles size={11} /> Auto-filled from chat
+            </span>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -231,7 +253,7 @@ export default function Step4QuoteSummary() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-xs font-body text-[#9C8878]">
               <Lock size={12} />
-              Secured by Razorpay
+              Secured by Cashfree
             </div>
             <button
               type="submit"
@@ -246,7 +268,7 @@ export default function Step4QuoteSummary() {
               ) : (
                 <>
                   <CreditCard size={15} />
-                  Pay {formatINR(priceBreakdown.depositAmount)} Deposit
+                  Pay {formatINR(priceBreakdown.total)} with Cashfree
                 </>
               )}
             </button>

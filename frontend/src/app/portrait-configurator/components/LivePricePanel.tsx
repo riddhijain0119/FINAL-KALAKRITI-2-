@@ -83,20 +83,11 @@ export default function LivePricePanel() {
           </span>
         </div>
 
-        {/* Deposit split */}
-        <div className="border-t border-[hsl(var(--border))] pt-3 space-y-1.5">
-          <div className="flex justify-between">
-            <span className="font-body text-xs text-[#9C8878]">Pay now (50%)</span>
-            <span className="font-body text-sm font-600 text-[#C9A84C] tabular-nums">
-              {formatINR(priceBreakdown?.depositAmount)}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="font-body text-xs text-[#9C8878]">On approval (50%)</span>
-            <span className="font-body text-xs text-[#9C8878] tabular-nums">
-              {formatINR(priceBreakdown?.balanceAmount)}
-            </span>
-          </div>
+        {/* Payment note */}
+        <div className="border-t border-[hsl(var(--border))] pt-3">
+          <p className="font-body text-[11px] text-[#9C8878] leading-relaxed">
+            Full payment at checkout · Portrait ships directly after completion.
+          </p>
         </div>
 
         {/* Toggle breakdown */}
@@ -143,7 +134,7 @@ export default function LivePricePanel() {
         <div className="flex items-start gap-2 pt-2 border-t border-[hsl(var(--border))]">
           <Info size={12} className="text-[#C9A84C] mt-0.5 flex-shrink-0" />
           <p className="font-body text-xs text-[#9C8878]">
-            50-day satisfaction guarantee. If you're not happy after 2 revisions, we refund your deposit.
+            50-day satisfaction guarantee. Full refund if you're not delighted with your portrait.
           </p>
         </div>
       </div>
