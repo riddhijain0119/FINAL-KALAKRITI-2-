@@ -41,7 +41,7 @@ def test_health(client):
     r = client.get(f"{API}/")
     assert r.status_code == 200
     j = r.json()
-    assert j.get("ok") is True
+    assert j.get("ok") == True
 
 
 # ---------- Orders ----------
@@ -102,7 +102,7 @@ def test_cashfree_create_mock(client, created_order):
     r = client.post(f"{API}/payments/cashfree/create", params={"order_id": oid})
     assert r.status_code == 200, r.text
     data = r.json()
-    assert data.get("mock") is True
+    assert data.get("mock") == True
     assert data["order_id"] == oid
     assert data["payment_session_id"].startswith("mock_session_")
 
@@ -138,7 +138,7 @@ def test_cashfree_webhook_success(client, created_order):
 def test_cashfree_webhook_no_order_id(client):
     r = client.post(f"{API}/payments/cashfree/webhook", json={"data": {}})
     assert r.status_code == 200
-    assert r.json().get("ok") is False
+    assert r.json().get("ok") == False
 
 
 # ---------- WhatsApp ----------

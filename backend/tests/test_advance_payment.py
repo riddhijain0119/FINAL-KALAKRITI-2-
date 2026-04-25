@@ -29,7 +29,7 @@ def _base_order(amount=8000, plan=None):
 def test_health():
     r = requests.get(f"{API}/")
     assert r.status_code == 200
-    assert r.json().get("ok") is True
+    assert r.json().get("ok") == True
 
 def test_create_order_advance_25_sets_amounts():
     r = requests.post(f"{API}/orders", json=_base_order(8000, "advance_25"))
@@ -66,7 +66,7 @@ def test_advance_flow_end_to_end():
     data = r.json()
     assert data["charge_amount"] == 2000.0
     assert data["installment"] == "advance"
-    assert data.get("mock") is True
+    assert data.get("mock") == True
 
     # 3. Mock confirm advance
     r = requests.post(f"{API}/payments/cashfree/mock-confirm", params={"order_id": oid})

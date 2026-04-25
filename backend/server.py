@@ -1083,9 +1083,10 @@ async def get_cms_image(image_id: str):
         header, b64 = data_url.split(',', 1)
         mime = header.split(';')[0].replace('data:', '') or 'image/jpeg'
         raw = base64.b64decode(b64)
-    except Exception:
-        raise HTTPException(status_code=400, detail='Corrupt image')
-    return Response(content=raw, media_type=mime, headers={'Cache-Control': 'public, max-age=86400'})
+    except Exception as e:
+        raise HTTPException(status_code=400, detail='Corrupt image') from e
+    else:
+        return Response(content=raw, media_type=mime, headers={'Cache-Control': 'public, max-age=86400'})
 
 
 @api_router.get('/chat/image/{image_id}')
@@ -1101,9 +1102,10 @@ async def chat_image(image_id: str):
         header, b64 = data_url.split(',', 1)
         mime = header.split(';')[0].replace('data:', '') or 'image/jpeg'
         raw = base64.b64decode(b64)
-    except Exception:
-        raise HTTPException(status_code=400, detail='Corrupt image')
-    return Response(content=raw, media_type=mime)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail='Corrupt image') from e
+    else:
+        return Response(content=raw, media_type=mime)
 
 
 @api_router.get('/orders/by-chat/{order_id}')
