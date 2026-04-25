@@ -1398,6 +1398,161 @@ async def broadcast_history(request: Request):
     return docs
 
 
+# ==================== Shiprocket Shipping ====================
+import shiprocket  # noqa: E402
+
+
+@api_router.get('/admin/shiprocket/status')
+async def shiprocket_status(request: Request):
+    await require_admin(request)
+    return {'configured': shiprocket.is_configured(),
+            'pickup_pincode': shiprocket.PICKUP_PINCODE,
+            'pickup_location': shiprocket.PICKUP_LOCATION}
+
+
+@api_router.get('/shipping/rates')
+async def shipping_rates(pincode: str, weight: float = 0.5):
+    """Public — list courier options + rates for a delivery pincode."""
+    if not shiprocket.is_configured():
+        raise HTTPException(status_code=503, detail='Shipping not configured')
+    if not (pincode.isdigit() and len(pincode) == 6):
+        raise HTTPException(status_code=400, detail='Invalid pincode')
+    try:
+        couriers = await shiprocket.serviceability(pincode, weight_kg=weight)
+        return {'pincode': pincode, 'couriers': couriers}
+    except Exception as e:
+        logger.error(f'shiprocket serviceability failed: {e}')
+        raise HTTPException(status_code=502, detail='Could not fetch courier rates')
+
+
+@api_router.post('/admin/orders/{order_id}/ship')
+async def admin_ship_order(order_id: str, request: Request):
+    """
+    Admin: create Shiprocket order, assign AWB, generate label.
+    Body (optional): {courier_id?: int, weight?: float}
+    """
+    await require_admin(request)
+    if not shiprocket.is_configured():
+        raise HTTPException(status_code=503, detail='Shipping not configured. Add SHIPROCKET_* env vars.')
+    body = {}
+    try: body = await request.json()
+    except Exception: pass
+    order = await db.orders.find_one({'order_id': order_id}, {'_id': 0})
+    if not order:
+        raise HTTPException(status_code=404, detail='Order not found')
+    if (order.get('shiprocket') or {}).get('awb_code'):
+        return {'message': 'Already shipped', 'shiprocket': order['shiprocket']}
+    try:
+        # 1. Create Shiprocket order
+        created = await shiprocket.create_order(order)
+        shipment_id = created.get('shipment_id')
+        if not shipment_id:
+            raise HTTPException(status_code=502, detail=f"Shiprocket did not return shipment_id: {created}")
+        # 2. Assign AWB (auto picks cheapest if courier_id not given)
+        awb_info = await shiprocket.assign_awb(shipment_id, body.get('courier_id'))
+        awb = awb_info.get('awb_code')
+        # 3. Generate label
+        label_url = ''
+        try:
+            label_url = await shiprocket.generate_label(shipment_id)
+        except Exception as e:
+            logger.warning(f'label gen failed (continuing): {e}')
+        sr_data = {
+            'shiprocket_order_id': created.get('shiprocket_order_id'),
+            'shipment_id': shipment_id,
+            'awb_code': awb,
+            'courier_name': awb_info.get('courier_name'),
+            'courier_company_id': awb_info.get('courier_company_id'),
+            'label_url': label_url,
+            'tracking_url': f"https://shiprocket.co/tracking/{awb}" if awb else '',
+            'shipped_at': datetime.now(timezone.utc).isoformat(),
+        }
+        now = datetime.now(timezone.utc)
+        await db.orders.update_one({'order_id': order_id}, {'$set': {
+            'shiprocket': sr_data,
+            'status': 'Shipped',
+            'tracking_id': awb,
+            'courier_name': awb_info.get('courier_name'),
+            'updated_at': now,
+        }, '$push': {'timeline': {'status': 'Shipped', 'at': now.isoformat(), 'note': f"Shipped via {awb_info.get('courier_name')} (AWB {awb})"}}})
+        # 4. Email customer the tracking link
+        try:
+            html = f"""<p>Hi {order.get('customer_name','')},</p>
+<p>Great news — your Kalakriti portrait has shipped!</p>
+<p><strong>AWB:</strong> {awb}<br/>
+<strong>Courier:</strong> {awb_info.get('courier_name')}<br/>
+<a href="{sr_data['tracking_url']}">Track your shipment →</a></p>
+<p>Expected delivery in 2–4 business days.</p>
+<p>— Kalakriti</p>"""
+            if order.get('customer_email'):
+                await _send_email([order['customer_email']], 'Your Kalakriti portrait has shipped', html)
+        except Exception as e:
+            logger.warning(f'tracking email failed: {e}')
+        return {'ok': True, 'shiprocket': sr_data}
+    except HTTPException: raise
+    except Exception as e:
+        logger.error(f'shiprocket ship failed: {e}')
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@api_router.get('/admin/orders/{order_id}/label')
+async def admin_get_label(order_id: str, request: Request):
+    """Returns the cached label_url, regenerating from Shiprocket if missing."""
+    await require_admin(request)
+    order = await db.orders.find_one({'order_id': order_id}, {'_id': 0})
+    if not order:
+        raise HTTPException(status_code=404, detail='Order not found')
+    sr = order.get('shiprocket') or {}
+    if sr.get('label_url'):
+        return {'label_url': sr['label_url']}
+    if not sr.get('shipment_id'):
+        raise HTTPException(status_code=400, detail='Order not yet shipped via Shiprocket')
+    try:
+        url = await shiprocket.generate_label(sr['shipment_id'])
+        await db.orders.update_one({'order_id': order_id}, {'$set': {'shiprocket.label_url': url}})
+        return {'label_url': url}
+    except Exception as e:
+        logger.error(f'label fetch failed: {e}')
+        raise HTTPException(status_code=502, detail='Could not fetch label')
+
+
+@api_router.get('/track/{awb}')
+async def track_shipment(awb: str):
+    """Public tracking endpoint — used by /track-order page."""
+    if not shiprocket.is_configured():
+        raise HTTPException(status_code=503, detail='Tracking not configured')
+    try:
+        return await shiprocket.track_awb(awb)
+    except Exception as e:
+        logger.error(f'track failed: {e}')
+        raise HTTPException(status_code=502, detail='Could not fetch tracking info')
+
+
+@api_router.post('/webhooks/shiprocket')
+async def shiprocket_webhook(request: Request):
+    """Shiprocket posts status updates here. We mirror them onto the order."""
+    body = await request.json()
+    awb = body.get('awb') or body.get('awb_code')
+    new_status = body.get('current_status') or body.get('status')
+    if not awb:
+        return {'ok': False, 'reason': 'missing awb'}
+    order = await db.orders.find_one({'shiprocket.awb_code': awb}, {'_id': 0})
+    if not order:
+        return {'ok': False, 'reason': 'order not found'}
+    status_map = {
+        'PICKED UP': 'Shipped', 'IN TRANSIT': 'Shipped',
+        'OUT FOR DELIVERY': 'Out for Delivery', 'DELIVERED': 'Delivered',
+        'RTO INITIATED': 'Returned', 'RTO DELIVERED': 'Returned',
+    }
+    mapped = status_map.get((new_status or '').upper())
+    update: Dict[str, Any] = {'shiprocket.last_status': new_status,
+                              'shiprocket.last_updated_at': datetime.now(timezone.utc).isoformat()}
+    if mapped:
+        update['status'] = mapped
+    await db.orders.update_one({'shiprocket.awb_code': awb}, {'$set': update})
+    return {'ok': True}
+
+
 @api_router.get('/content/{section}')
 async def get_content(section: str):
     """Public endpoint: returns CMS section content. Falls back to default if unset."""

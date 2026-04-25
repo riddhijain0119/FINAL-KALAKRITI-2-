@@ -233,6 +233,10 @@ function UpdateModal({ order, onClose, onSaved }: { order: Order; onClose: () =>
   const [courier, setCourier] = useState(order.courier || '');
   const [trackingId, setTrackingId] = useState(order.tracking_id || '');
   const [saving, setSaving] = useState(false);
+  const [shipping, setShipping] = useState(false);
+  const [shipMsg, setShipMsg] = useState('');
+  const sr: any = (order as any).shiprocket || {};
+  const alreadyShipped = !!sr.awb_code;
 
   const save = async () => {
     setSaving(true);
@@ -247,14 +251,67 @@ function UpdateModal({ order, onClose, onSaved }: { order: Order; onClose: () =>
     } finally { setSaving(false); }
   };
 
+  const shipNow = async () => {
+    if (!confirm('Create a Shiprocket shipment for this order? This will assign an AWB and email the customer.')) return;
+    setShipping(true); setShipMsg('');
+    try {
+      const r: any = await api(`/api/admin/orders/${order.order_id}/ship`, { method: 'POST', body: JSON.stringify({}) });
+      setShipMsg(`✓ Shipped via ${r.shiprocket?.courier_name} (AWB ${r.shiprocket?.awb_code})`);
+      setTrackingId(r.shiprocket?.awb_code || '');
+      setCourier(r.shiprocket?.courier_name || '');
+      setStatus('Shipped');
+      setTimeout(onSaved, 1200);
+    } catch (e: any) { setShipMsg('Failed: ' + (e?.message || 'unknown')); }
+    finally { setShipping(false); }
+  };
+
+  const printLabel = async () => {
+    try {
+      const r: any = await api(`/api/admin/orders/${order.order_id}/label`);
+      if (r?.label_url) window.open(r.label_url, '_blank');
+      else alert('No label URL returned');
+    } catch (e: any) { alert('Failed: ' + (e?.message || 'unknown')); }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-[#2C1810]/60 backdrop-blur-sm flex items-center justify-center p-4" data-testid="update-modal">
-      <div className="bg-[#FFFDF9] border border-[#E0D5C8] rounded-2xl p-6 w-full max-w-md shadow-luxury-lg">
+      <div className="bg-[#FFFDF9] border border-[#E0D5C8] rounded-2xl p-6 w-full max-w-md shadow-luxury-lg max-h-[95vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-display text-2xl text-[#2C1810]">Update Order</h3>
           <button onClick={onClose}><X size={18}/></button>
         </div>
         <p className="text-xs font-mono text-[#9C8878] mb-4">{order.order_id}</p>
+
+        {/* Shiprocket section */}
+        <div className="mb-5 p-3 rounded-sm bg-[#FAF6F0] border border-[#E0D5C8]">
+          <p className="text-xs font-body uppercase tracking-widest text-[#9C8878] mb-2">Shiprocket</p>
+          {alreadyShipped ? (
+            <div className="space-y-1.5 text-sm">
+              <p className="text-emerald-700 font-body">✓ Shipped via <strong>{sr.courier_name}</strong></p>
+              <p className="text-xs text-[#3D3530] font-mono">AWB: {sr.awb_code}</p>
+              <div className="flex gap-2 pt-1">
+                {sr.tracking_url && (
+                  <a href={sr.tracking_url} target="_blank" rel="noreferrer" className="text-xs text-[#C9A84C] hover:underline">Track →</a>
+                )}
+                <button onClick={printLabel} data-testid={`print-label-${order.order_id}`} className="text-xs text-[#C9A84C] hover:underline">Print Label PDF</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={shipNow}
+                disabled={shipping}
+                data-testid={`ship-via-shiprocket-${order.order_id}`}
+                className="w-full px-3 py-2 text-sm rounded-sm bg-[#C9A84C] text-[#2C1810] hover:bg-[#E8C96A] disabled:opacity-60 font-body"
+              >
+                {shipping ? 'Creating shipment…' : '🚚 Ship via Shiprocket (auto-AWB)'}
+              </button>
+              <p className="text-xs text-[#9C8878] mt-1.5">Auto-creates Shiprocket order, picks cheapest courier, generates label PDF, emails customer.</p>
+              {shipMsg && <p className="text-xs mt-2 font-body" data-testid="ship-msg">{shipMsg}</p>}
+            </>
+          )}
+        </div>
+
         <label className="block mb-3">
           <span className="text-sm text-[#3D3530]">Status</span>
           <select value={status} onChange={(e) => setStatus(e.target.value)} data-testid="modal-status-select"
@@ -263,12 +320,12 @@ function UpdateModal({ order, onClose, onSaved }: { order: Order; onClose: () =>
           </select>
         </label>
         <label className="block mb-3">
-          <span className="text-sm text-[#3D3530]">Courier</span>
+          <span className="text-sm text-[#3D3530]">Courier (manual override)</span>
           <input value={courier} onChange={(e) => setCourier(e.target.value)} placeholder="e.g. Delhivery"
             className="mt-1 w-full px-3 py-2 rounded-sm bg-[#FAF6F0] border border-[#E0D5C8]" data-testid="modal-courier-input"/>
         </label>
         <label className="block mb-3">
-          <span className="text-sm text-[#3D3530]">Tracking ID</span>
+          <span className="text-sm text-[#3D3530]">Tracking ID (AWB)</span>
           <input value={trackingId} onChange={(e) => setTrackingId(e.target.value)} placeholder="AWB number"
             className="mt-1 w-full px-3 py-2 rounded-sm bg-[#FAF6F0] border border-[#E0D5C8]" data-testid="modal-tracking-input"/>
         </label>
