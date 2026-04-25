@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Star, Quote } from 'lucide-react';
 import KalakritiNav from '@/components/KalakritiNav';
+import { useSiteText } from '@/lib/useSiteText';
 
 interface PublicReview {
   review_id: string;
@@ -14,6 +15,7 @@ interface PublicReview {
 }
 
 export default function ReviewsPage() {
+  const t = useSiteText();
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,10 +38,10 @@ export default function ReviewsPage() {
       <div className="pt-16">
         {/* Header */}
         <section className="max-w-screen-2xl mx-auto px-6 lg:px-10 pt-12 pb-10">
-          <p className="section-label mb-3">What our customers say</p>
+          <p className="section-label mb-3">{t('reviews_eyebrow', 'What our customers say')}</p>
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-500 text-[#2C1810] leading-tight">
-            Loved by <em className="italic text-[#C9A84C]">families</em><br />
-            across India.
+            {t('reviews_headline', 'Loved by')} <em className="italic text-[#C9A84C]">{t('reviews_headline_em', 'families')}</em><br />
+            {t('reviews_headline_after', 'across India.')}
           </h1>
 
           {!loading && reviews.length > 0 && (
@@ -120,16 +122,16 @@ export default function ReviewsPage() {
         {/* CTA */}
         <section className="bg-[#2C1810] py-16 px-6">
           <div className="max-w-3xl mx-auto text-center text-[#FAF6F0]">
-            <p className="font-body text-xs text-[#C9A84C] uppercase tracking-widest mb-3">Your turn</p>
+            <p className="font-body text-xs text-[#C9A84C] uppercase tracking-widest mb-3">{t('reviews_cta_eyebrow', 'Your turn')}</p>
             <h2 className="font-display text-3xl md:text-4xl text-[#FAF6F0] leading-tight">
-              Ready to commission <em className="italic text-[#C9A84C]">your masterpiece</em>?
+              {t('reviews_cta_headline', 'Ready to commission')} <em className="italic text-[#C9A84C]">{t('reviews_cta_headline_em', 'your masterpiece')}</em>?
             </h2>
             <Link
               href="/portrait-configurator"
               data-testid="reviews-cta"
               className="inline-block mt-6 px-8 py-3 rounded-sm bg-[#C9A84C] text-[#2C1810] font-body font-600 text-sm hover:bg-[#E8C96A] transition-colors"
             >
-              Start your portrait →
+              {t('reviews_cta_button', 'Start your portrait →')}
             </Link>
           </div>
         </section>

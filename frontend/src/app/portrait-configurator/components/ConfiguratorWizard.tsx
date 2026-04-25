@@ -10,8 +10,10 @@ import Step2FacesUpload from './Step2FacesUpload';
 import Step3FramingAddons from './Step3FramingAddons';
 import Step4QuoteSummary from './Step4QuoteSummary';
 import LivePricePanel from './LivePricePanel';
+import { useSiteText } from '@/lib/useSiteText';
 
 export default function ConfiguratorWizard() {
+  const t = useSiteText();
   const { currentStep, recalcPrice } = useWizardStore();
 
   // Initialize price on mount
@@ -35,7 +37,7 @@ export default function ConfiguratorWizard() {
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="font-display text-xl font-500 text-[#2C1810]">Configure Your Portrait</h1>
+              <h1 className="font-display text-xl font-500 text-[#2C1810]">{t('configurator_title', 'Configure Your Portrait')}</h1>
               <p className="font-body text-xs text-[#9C8878] mt-0.5">
                 Step {currentStep} of 4 — {
                   currentStep === 1 ? 'Choose your medium & size' :

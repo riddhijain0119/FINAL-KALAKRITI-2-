@@ -1,11 +1,14 @@
+'use client';
 import React from 'react';
 import Link from 'next/link';
 import AppLogo from '@/components/ui/AppLogo';
 import { ArrowRight, Camera, Play, Mail } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
+import { useSiteText } from '@/lib/useSiteText';
 
 
 export default function FooterCTA() {
+  const t = useSiteText();
   return (
     <>
       {/* Final CTA Section */}
@@ -14,16 +17,16 @@ export default function FooterCTA() {
         <div className="absolute top-0 left-0 right-0 h-px bg-gold-gradient opacity-40" />
 
         <div className="relative z-10 max-w-screen-2xl mx-auto px-6 lg:px-10 text-center">
-          <p className="section-label text-[#C9A84C]/70 mb-4">Ready to Begin?</p>
+          <p className="section-label text-[#C9A84C]/70 mb-4">{t('final_cta_eyebrow', 'Ready to Begin?')}</p>
           <h2 className="font-display text-4xl md:text-5xl font-400 text-[#FAF6F0] mb-6 leading-tight">
-            Your memory deserves a<br />
-            <em className="italic text-[#C9A84C]">permanent form.</em>
+            {t('final_cta_headline', 'Your memory deserves a')}<br />
+            <em className="italic text-[#C9A84C]">{t('final_cta_headline_em', 'permanent form.')}</em>
           </h2>
           <p className="font-body text-sm text-[#FAF6F0]/60 max-w-md mx-auto mb-10">
-            Configure your portrait in 3 minutes. Live pricing, no hidden fees, artist-reviewed before delivery.
+            {t('final_cta_subtext', 'Configure your portrait in 3 minutes. Live pricing, free India shipping, hand-painted by verified artists.')}
           </p>
           <Link href="/portrait-configurator" className="btn-gold px-10 py-4 text-base shadow-gold">
-            Configure My Portrait
+            {t('final_cta_button', 'Configure My Portrait')}
             <ArrowRight size={18} />
           </Link>
         </div>

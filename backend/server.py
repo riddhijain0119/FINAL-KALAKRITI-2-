@@ -1025,24 +1025,70 @@ DEFAULT_CMS_CONTENT: Dict[str, Any] = {
     },
     'site_text': {
         # Text copy across the site — editable from /admin/listings → Site Text
+        # ----- Brand -----
         'brand_name': 'Kalakriti',
         'brand_tagline': 'Handcrafted in India',
+
+        # ----- Homepage Hero -----
         'hero_headline': 'From Snapshot to',
         'hero_headline_em': 'Masterpiece',
         'hero_subtext': 'Drag the slider to witness the transformation. Every Kalakriti portrait is handcrafted by a verified artist — no filters, no AI.',
         'cta_primary': 'Create My Portrait',
         'cta_secondary': 'Browse Gallery',
+
+        # ----- "Choose Your Medium" section (homepage) -----
+        'medium_section_eyebrow': 'Choose Your Medium',
+        'medium_section_headline': 'Curated mediums.',
+        'medium_section_headline_em': 'One standard of excellence.',
+        'medium_section_subtext': 'Each portrait is handcrafted by artists with 5+ years of commission experience — never AI-generated.',
+
+        # ----- Gallery page header -----
+        'gallery_eyebrow': 'Our Portfolio',
+        'gallery_headline': 'Gallery of',
+        'gallery_headline_em': 'Handcrafted Portraits',
+        'gallery_subtext': 'Every portrait is handcrafted by our verified artists — never AI-generated. Browse our work across four mediums.',
+
+        # ----- Reviews page header -----
+        'reviews_eyebrow': 'What our customers say',
+        'reviews_headline': 'Loved by',
+        'reviews_headline_em': 'families',
+        'reviews_headline_after': 'across India.',
+        'reviews_cta_eyebrow': 'Your turn',
+        'reviews_cta_headline': 'Ready to commission',
+        'reviews_cta_headline_em': 'your masterpiece',
+        'reviews_cta_button': 'Start your portrait →',
+
+        # ----- Configurator page -----
+        'configurator_title': 'Configure Your Portrait',
+        'configurator_subtitle': 'Step 1 of 4 — Choose your medium & size',
+        'configurator_medium_title': 'Choose Your Medium',
+        'configurator_medium_subtitle': 'Each medium creates a distinct artistic result. Hover to preview.',
+
+        # ----- Final CTA (bottom of homepage) -----
+        'final_cta_eyebrow': 'Ready to Begin?',
+        'final_cta_headline': 'Your memory deserves a',
+        'final_cta_headline_em': 'permanent form.',
+        'final_cta_subtext': 'Configure your portrait in 3 minutes. Live pricing, free India shipping, hand-painted by verified artists.',
+        'final_cta_button': 'Configure My Portrait',
+
+        # ----- About / Our Story (policies page) -----
         'about_title': 'Our Story',
         'about_body': 'Kalakriti is a boutique studio of verified Indian artists, each with 5+ years of commission experience. Every portrait is hand-crafted on premium paper or canvas — never AI-generated. Founded in 2024, we have delivered 2,400+ heirlooms across India.',
+
+        # ----- Policies (policies page) -----
         'return_policy': 'NON-RETURNABLE: Each portrait is custom hand-painted to your order — for this reason all sales are final and non-refundable. We share progress photos before shipping so you know exactly what to expect. If your portrait arrives damaged in transit, contact us within 48 hours of delivery and we will repaint at no charge.',
         'shipping_policy': 'FREE shipping across India. Production timeline depends on the medium (3–18 days). Once shipped, courier delivery typically takes 2–4 business days. International shipping available on request — contact us for a quote.',
         'privacy_policy': 'We collect your name, email, phone, and shipping address only to fulfil your order and send you status updates. We never sell or share your data. Photos you upload are used solely as references for your portrait and deleted from our servers within 90 days of delivery.',
         'terms': 'By placing an order, you confirm the reference photos are yours or used with consent. Kalakriti retains the right to display the finished artwork in our portfolio (without your name) unless you opt out. All artwork remains intellectual property of the artist; you receive a personal-use license.',
+
+        # ----- Contact -----
         'contact_email': 'hello@kalakritishop.in',
         'contact_phone': '+91 96677 88175',
         'contact_address': 'Kalakriti Studio, Mumbai, India',
         'whatsapp_number': '919667788175',
         'instagram_url': 'https://instagram.com/kalakritishop',
+
+        # ----- Footer -----
         'footer_blurb': 'Boutique studio of verified Indian artists. Handcrafted portraits since 2024.',
     }
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, animate } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchContent, CmsHeroItem } from '@/lib/api';
+import { useSiteText } from '@/lib/useSiteText';
 
 // Fallback transformations — replaced at runtime by CMS content if available
 const FALLBACK: CmsHeroItem[] = [
@@ -24,6 +25,7 @@ const FALLBACK: CmsHeroItem[] = [
 
 
 export default function HeroSection() {
+  const t = useSiteText();
   const [transformations, setTransformations] = useState<CmsHeroItem[]>(FALLBACK);
   const [sliderX, setSliderX] = useState(50); // percentage 0–100
   const [activeIndex, setActiveIndex] = useState(0);
@@ -83,7 +85,7 @@ export default function HeroSection() {
           
           <div className="h-px w-8 bg-[#C9A84C]" />
           <span className="font-body text-xs font-500 tracking-widest uppercase text-[#C9A84C]">
-            Handcrafted in India
+            {t('brand_tagline', 'Handcrafted in India')}
           </span>
           <div className="h-px w-8 bg-[#C9A84C]" />
         </motion.div>
@@ -109,8 +111,8 @@ export default function HeroSection() {
             </> :
 
           <>
-              From Snapshot to{' '}
-              <em className="italic text-[#C9A84C]">Masterpiece</em>
+              {t('hero_headline', 'From Snapshot to')}{' '}
+              <em className="italic text-[#C9A84C]">{t('hero_headline_em', 'Masterpiece')}</em>
             </>
           }
         </motion.h1>
@@ -121,7 +123,7 @@ export default function HeroSection() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="font-body text-base md:text-lg text-[#FAF6F0]/70 text-center max-w-xl mb-10">
           
-          Drag the slider to witness the transformation. Every Kalakriti portrait is handcrafted by a verified artist — no filters, no AI.
+          {t('hero_subtext', 'Drag the slider to witness the transformation. Every Kalakriti portrait is handcrafted by a verified artist — no filters, no AI.')}
         </motion.p>
 
         {/* Before/After Slider */}
@@ -221,11 +223,11 @@ export default function HeroSection() {
           className="flex flex-col sm:flex-row items-center gap-4 mt-10">
           
           <Link href="/portrait-configurator" className="btn-gold text-sm px-8 py-3.5 shadow-gold">
-            Create My Portrait
+            {t('cta_primary', 'Create My Portrait')}
             <ArrowRight size={16} />
           </Link>
           <Link href="/gallery" className="font-body text-sm text-[#FAF6F0]/70 hover:text-[#FAF6F0] transition-colors flex items-center gap-1.5">
-            Browse Gallery
+            {t('cta_secondary', 'Browse Gallery')}
             <ArrowRight size={14} />
           </Link>
         </motion.div>

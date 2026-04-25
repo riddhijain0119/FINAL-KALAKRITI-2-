@@ -6,6 +6,7 @@ import { X, ArrowRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import KalakritiNav from '@/components/KalakritiNav';
 import { fetchContent, CmsGalleryItem } from '@/lib/api';
+import { useSiteText } from '@/lib/useSiteText';
 
 const FALLBACK: CmsGalleryItem[] = [
   { id: 'g1', title: 'Family Portrait', medium: 'Watercolour', size: '12×16 in',
@@ -19,6 +20,7 @@ const FALLBACK: CmsGalleryItem[] = [
 const MEDIUMS = ['All', 'Watercolour', 'Pencil Sketch', 'Oil on Canvas', 'Charcoal'];
 
 export default function GalleryPage() {
+  const t = useSiteText();
   const [items, setItems] = useState<CmsGalleryItem[]>(FALLBACK);
   const [activeFilter, setActiveFilter] = useState('All');
   const [lightboxItem, setLightboxItem] = useState<CmsGalleryItem | null>(null);
@@ -40,15 +42,15 @@ export default function GalleryPage() {
       <main className="min-h-screen bg-[#FAF6F0] pt-24 pb-20">
         {/* Header */}
         <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 mb-12">
-          <p className="section-label mb-3">Our Portfolio</p>
+          <p className="section-label mb-3">{t('gallery_eyebrow', 'Our Portfolio')}</p>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-500 text-[#2C1810] leading-tight">
-                Gallery of<br />
-                <em className="italic text-[#C9A84C]">Handcrafted Portraits</em>
+                {t('gallery_headline', 'Gallery of')}<br />
+                <em className="italic text-[#C9A84C]">{t('gallery_headline_em', 'Handcrafted Portraits')}</em>
               </h1>
               <p className="font-body text-sm text-[#9C8878] mt-3 max-w-md">
-                Every portrait is handcrafted by our verified artists — never AI-generated. Browse our work across four mediums.
+                {t('gallery_subtext', 'Every portrait is handcrafted by our verified artists — never AI-generated. Browse our work across four mediums.')}
               </p>
             </div>
             <Link href="/portrait-configurator" className="btn-gold text-sm px-8 py-3.5 shadow-gold self-start md:self-auto">

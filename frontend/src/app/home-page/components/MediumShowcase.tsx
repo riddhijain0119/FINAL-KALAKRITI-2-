@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, Clock } from 'lucide-react';
 import { fetchContent, CmsMedium } from '@/lib/api';
+import { useSiteText } from '@/lib/useSiteText';
 
 const FALLBACK: CmsMedium[] = [
   { id: 'm1', key: 'watercolor', name: 'Watercolour', tagline: 'Luminous washes, soft depth',
@@ -26,6 +27,7 @@ const FALLBACK: CmsMedium[] = [
 ];
 
 export default function MediumShowcase() {
+  const t = useSiteText();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mediums, setMediums] = useState<CmsMedium[]>(FALLBACK);
 
@@ -41,14 +43,14 @@ export default function MediumShowcase() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
           <div>
-            <p className="section-label mb-3">Choose Your Medium</p>
+            <p className="section-label mb-3">{t('medium_section_eyebrow', 'Choose Your Medium')}</p>
             <h2 className="font-display text-3xl md:text-4xl font-500 text-[#2C1810] leading-tight">
-              Curated mediums.<br />
-              <em className="italic text-[#C9A84C]">One standard of excellence.</em>
+              {t('medium_section_headline', 'Curated mediums.')}<br />
+              <em className="italic text-[#C9A84C]">{t('medium_section_headline_em', 'One standard of excellence.')}</em>
             </h2>
           </div>
           <p className="font-body text-sm text-[#9C8878] max-w-xs text-right">
-            Each portrait is handcrafted by artists with 5+ years of commission experience — never AI-generated.
+            {t('medium_section_subtext', 'Each portrait is handcrafted by artists with 5+ years of commission experience — never AI-generated.')}
           </p>
         </div>
 

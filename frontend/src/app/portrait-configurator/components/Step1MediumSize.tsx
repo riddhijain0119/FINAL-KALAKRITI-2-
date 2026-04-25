@@ -6,6 +6,7 @@ import { Check, Clock, Info } from 'lucide-react';
 import { useWizardStore } from '@/lib/state/wizardStore';
 import { type Medium, type SizeKey, MEDIUM_BASE_PRICES, SIZE_MULTIPLIERS, MEDIUM_DAYS, getMediumLabel, getSizeLabel } from '@/lib/pricing/engine';
 import { usePricingVersion } from '@/lib/pricing/usePricingVersion';
+import { useSiteText } from '@/lib/useSiteText';
 
 const MEDIUMS: { key: Medium; description: string; tag?: string; image: string }[] = [
   { key: 'watercolor', description: 'Soft washes, luminous depth, most expressive', tag: 'Most Popular',
@@ -25,6 +26,7 @@ const MEDIUMS: { key: Medium; description: string; tag?: string; image: string }
 const SIZES: SizeKey[] = ['A4', 'A3', 'A2'];
 
 export default function Step1MediumSize() {
+  const t = useSiteText();
   const { medium, sizeKey, setMedium, setSizeKey, nextStep, markStepComplete } = useWizardStore();
   usePricingVersion(); // re-render when admin updates CMS pricing
 
@@ -38,10 +40,10 @@ export default function Step1MediumSize() {
       {/* Medium Selection */}
       <div>
         <div className="flex items-center gap-2 mb-1">
-          <h2 className="font-display text-2xl font-500 text-[#2C1810]">Choose Your Medium</h2>
+          <h2 className="font-display text-2xl font-500 text-[#2C1810]">{t('configurator_medium_title', 'Choose Your Medium')}</h2>
         </div>
         <p className="font-body text-sm text-[#9C8878] mb-6">
-          Each medium creates a distinct artistic result. Hover to preview.
+          {t('configurator_medium_subtitle', 'Each medium creates a distinct artistic result. Hover to preview.')}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

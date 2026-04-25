@@ -550,32 +550,112 @@ function BannerEditor() {
 }
 
 // ===== Site Text Editor =====
-const TEXT_FIELDS: { key: string; label: string; type: 'short' | 'long'; help?: string }[] = [
-  { key: 'brand_name',       label: 'Brand name', type: 'short' },
-  { key: 'brand_tagline',    label: 'Brand tagline (eyebrow)', type: 'short', help: 'Small text above hero headline' },
-  { key: 'hero_headline',    label: 'Hero headline (first part)', type: 'short' },
-  { key: 'hero_headline_em', label: 'Hero headline (italic gold part)', type: 'short' },
-  { key: 'hero_subtext',     label: 'Hero subtext', type: 'long' },
-  { key: 'cta_primary',      label: 'Primary CTA button', type: 'short' },
-  { key: 'cta_secondary',    label: 'Secondary CTA button', type: 'short' },
-  { key: 'about_title',      label: 'About section title', type: 'short' },
-  { key: 'about_body',       label: 'About section body', type: 'long' },
-  { key: 'return_policy',    label: 'Return / refund policy', type: 'long', help: 'Shown on /policies page. Also reflected in AI bot answers.' },
-  { key: 'shipping_policy',  label: 'Shipping policy', type: 'long' },
-  { key: 'privacy_policy',   label: 'Privacy policy', type: 'long' },
-  { key: 'terms',            label: 'Terms & conditions', type: 'long' },
-  { key: 'contact_email',    label: 'Contact email', type: 'short' },
-  { key: 'contact_phone',    label: 'Contact phone (display)', type: 'short' },
-  { key: 'contact_address',  label: 'Studio address', type: 'short' },
-  { key: 'whatsapp_number',  label: 'WhatsApp number (digits, no +)', type: 'short', help: 'For wa.me links. Example: 919667788175' },
-  { key: 'instagram_url',    label: 'Instagram URL', type: 'short' },
-  { key: 'footer_blurb',     label: 'Footer description', type: 'long' },
+const TEXT_GROUPS: { group: string; fields: { key: string; label: string; type: 'short' | 'long'; help?: string }[] }[] = [
+  {
+    group: 'Brand',
+    fields: [
+      { key: 'brand_name',    label: 'Brand name', type: 'short' },
+      { key: 'brand_tagline', label: 'Brand tagline (eyebrow above hero)', type: 'short' },
+    ],
+  },
+  {
+    group: 'Homepage Hero',
+    fields: [
+      { key: 'hero_headline',    label: 'Hero headline (first part)', type: 'short' },
+      { key: 'hero_headline_em', label: 'Hero headline (italic gold part)', type: 'short' },
+      { key: 'hero_subtext',     label: 'Hero subtext', type: 'long' },
+      { key: 'cta_primary',      label: 'Primary CTA button', type: 'short' },
+      { key: 'cta_secondary',    label: 'Secondary CTA link', type: 'short' },
+    ],
+  },
+  {
+    group: '"Choose Your Medium" section',
+    fields: [
+      { key: 'medium_section_eyebrow',     label: 'Eyebrow (small caps text)', type: 'short' },
+      { key: 'medium_section_headline',    label: 'Headline (first line)', type: 'short' },
+      { key: 'medium_section_headline_em', label: 'Headline (italic gold line)', type: 'short' },
+      { key: 'medium_section_subtext',     label: 'Subtext', type: 'long' },
+    ],
+  },
+  {
+    group: 'Gallery page',
+    fields: [
+      { key: 'gallery_eyebrow',     label: 'Eyebrow', type: 'short' },
+      { key: 'gallery_headline',    label: 'Headline (first line)', type: 'short' },
+      { key: 'gallery_headline_em', label: 'Headline (italic gold line)', type: 'short' },
+      { key: 'gallery_subtext',     label: 'Subtext', type: 'long' },
+    ],
+  },
+  {
+    group: 'Reviews page',
+    fields: [
+      { key: 'reviews_eyebrow',         label: 'Page eyebrow', type: 'short' },
+      { key: 'reviews_headline',        label: 'Headline (before italic)', type: 'short' },
+      { key: 'reviews_headline_em',     label: 'Headline (italic gold)', type: 'short' },
+      { key: 'reviews_headline_after',  label: 'Headline (after italic)', type: 'short' },
+      { key: 'reviews_cta_eyebrow',     label: 'Bottom CTA eyebrow', type: 'short' },
+      { key: 'reviews_cta_headline',    label: 'Bottom CTA headline (before italic)', type: 'short' },
+      { key: 'reviews_cta_headline_em', label: 'Bottom CTA headline (italic)', type: 'short' },
+      { key: 'reviews_cta_button',      label: 'Bottom CTA button label', type: 'short' },
+    ],
+  },
+  {
+    group: 'Configurator page',
+    fields: [
+      { key: 'configurator_title',             label: 'Page title', type: 'short' },
+      { key: 'configurator_medium_title',      label: 'Step 1 title', type: 'short' },
+      { key: 'configurator_medium_subtitle',   label: 'Step 1 subtitle', type: 'long' },
+    ],
+  },
+  {
+    group: 'Final CTA (homepage bottom)',
+    fields: [
+      { key: 'final_cta_eyebrow',     label: 'Eyebrow', type: 'short' },
+      { key: 'final_cta_headline',    label: 'Headline (first line)', type: 'short' },
+      { key: 'final_cta_headline_em', label: 'Headline (italic gold)', type: 'short' },
+      { key: 'final_cta_subtext',     label: 'Subtext', type: 'long' },
+      { key: 'final_cta_button',      label: 'Button label', type: 'short' },
+    ],
+  },
+  {
+    group: 'About / Our Story (Policies page)',
+    fields: [
+      { key: 'about_title', label: 'Section title', type: 'short' },
+      { key: 'about_body',  label: 'Section body', type: 'long' },
+    ],
+  },
+  {
+    group: 'Legal (Policies page)',
+    fields: [
+      { key: 'return_policy',   label: 'Return / refund policy', type: 'long', help: 'Also reflected in AI bot answers.' },
+      { key: 'shipping_policy', label: 'Shipping policy', type: 'long' },
+      { key: 'privacy_policy',  label: 'Privacy policy', type: 'long' },
+      { key: 'terms',           label: 'Terms & conditions', type: 'long' },
+    ],
+  },
+  {
+    group: 'Contact & Social',
+    fields: [
+      { key: 'contact_email',   label: 'Contact email', type: 'short' },
+      { key: 'contact_phone',   label: 'Contact phone (display)', type: 'short' },
+      { key: 'contact_address', label: 'Studio address', type: 'short' },
+      { key: 'whatsapp_number', label: 'WhatsApp number (digits, no +)', type: 'short', help: 'For wa.me links. Example: 919667788175' },
+      { key: 'instagram_url',   label: 'Instagram URL', type: 'short' },
+    ],
+  },
+  {
+    group: 'Footer',
+    fields: [
+      { key: 'footer_blurb', label: 'Footer description', type: 'long' },
+    ],
+  },
 ];
 
 function SiteTextEditor() {
   const [data, setData] = useState<Record<string, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [openGroup, setOpenGroup] = useState<string>('Brand');
 
   const load = async () => {
     setLoading(true);
@@ -602,29 +682,49 @@ function SiteTextEditor() {
 
   return (
     <SectionShell title="Site Text" onSave={save} onReset={reset} saving={saving}>
-      <p className="text-sm text-[#9C8878] mb-6">All text shown across the site — homepage copy, policy pages, contact info, footer. The AI chatbot also references the return policy.</p>
-      <div className="space-y-5">
-        {TEXT_FIELDS.map((f) => (
-          <Field key={f.key} label={f.label} testid={`sitetext-${f.key}`}>
-            {f.type === 'long' ? (
-              <textarea
-                rows={4}
-                value={data[f.key] || ''}
-                onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                className={inputCls}
-                data-testid={`sitetext-input-${f.key}`}
-              />
-            ) : (
-              <input
-                value={data[f.key] || ''}
-                onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
-                className={inputCls}
-                data-testid={`sitetext-input-${f.key}`}
-              />
-            )}
-            {f.help && <p className="text-xs text-[#9C8878] mt-1">{f.help}</p>}
-          </Field>
-        ))}
+      <p className="text-sm text-[#9C8878] mb-6">All text shown across the customer site — homepage copy, section headlines, button labels, policy pages, contact info. Click any group to expand.</p>
+
+      <div className="space-y-3" data-testid="sitetext-groups">
+        {TEXT_GROUPS.map(({ group, fields }) => {
+          const open = openGroup === group;
+          return (
+            <div key={group} className="border border-[#E0D5C8] rounded-sm overflow-hidden">
+              <button
+                onClick={() => setOpenGroup(open ? '' : group)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#FAF6F0]/60 hover:bg-[#FAF6F0] transition-colors"
+                data-testid={`sitetext-group-${group.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}
+              >
+                <span className="font-display text-base text-[#2C1810]">{group}</span>
+                <span className="text-xs text-[#9C8878]">{fields.length} field{fields.length === 1 ? '' : 's'} · {open ? 'Hide' : 'Show'}</span>
+              </button>
+              {open && (
+                <div className="p-4 space-y-4 bg-white">
+                  {fields.map((f) => (
+                    <Field key={f.key} label={f.label} testid={`sitetext-${f.key}`}>
+                      {f.type === 'long' ? (
+                        <textarea
+                          rows={4}
+                          value={data[f.key] || ''}
+                          onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                          className={inputCls}
+                          data-testid={`sitetext-input-${f.key}`}
+                        />
+                      ) : (
+                        <input
+                          value={data[f.key] || ''}
+                          onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                          className={inputCls}
+                          data-testid={`sitetext-input-${f.key}`}
+                        />
+                      )}
+                      {f.help && <p className="text-xs text-[#9C8878] mt-1">{f.help}</p>}
+                    </Field>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </SectionShell>
   );
