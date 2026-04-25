@@ -63,11 +63,9 @@
 - Auth: uses existing Emergent Google login; `ADMIN_EMAILS=riddhijain0119@gmail.com`.
 
 ## Backlog / Next Steps (updated 25 Apr 2026)
-- P0: Update `/app/frontend/src/app/project-review-portal/components/ReviewPortal.tsx`
-  timeline to "Order Received → In Production → Shipped → Delivered"
-  (deferred from previous session).
+- ✅ DONE: ReviewPortal timeline simplified to Order Received → In Production → Shipped → Delivered.
+  Removed RevisionThread + draft/approve flow (full upfront payment, direct ship model).
 - P1: Verify Resend domain `kalakritishop.in` (currently sending from `onboarding@resend.dev` sandbox).
 - P1: User to whitelist preview/prod domain in Cashfree dashboard.
 - P2: Wire portrait-configurator / pricing engine to `/api/content/pricing` so admin price edits flow through.
-- P2: Pre-existing syntax error in `LivePricePanel.tsx` (configurator) blocks `/portrait-configurator` build — needs cleanup.
-- P2: Delete unused `WhatsAppFloatingButton.tsx`.
+- P2: Delete unused `WhatsAppFloatingButton.tsx` and `RevisionThread.tsx`.

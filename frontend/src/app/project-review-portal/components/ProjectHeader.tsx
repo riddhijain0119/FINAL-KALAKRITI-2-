@@ -8,12 +8,10 @@ import Icon from '@/components/ui/AppIcon';
 
 
 const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string; bg: string; dot: string }> = {
+  ORDER_RECEIVED: { label: 'Order Received', color: 'text-amber-700', bg: 'bg-amber-50', dot: 'bg-amber-500' },
   IN_PRODUCTION: { label: 'In Production', color: 'text-blue-700', bg: 'bg-blue-50', dot: 'bg-blue-500' },
-  DRAFT_READY: { label: 'Draft Ready', color: 'text-amber-700', bg: 'bg-amber-50', dot: 'bg-amber-500' },
-  UNDER_REVIEW: { label: 'Under Review', color: 'text-purple-700', bg: 'bg-purple-50', dot: 'bg-purple-500' },
-  REVISION_REQUESTED: { label: 'Revision Requested', color: 'text-orange-700', bg: 'bg-orange-50', dot: 'bg-orange-500' },
-  FINAL_APPROVED: { label: 'Approved ✓', color: 'text-emerald-700', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
   SHIPPED: { label: 'Shipped', color: 'text-teal-700', bg: 'bg-teal-50', dot: 'bg-teal-500' },
+  DELIVERED: { label: 'Delivered ✓', color: 'text-emerald-700', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
 };
 
 export default function ProjectHeader({ project }: { project: Project }) {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Check, Clock, AlertCircle, Eye, Brush, Truck } from 'lucide-react';
+import { Check, ClipboardList, Brush, Truck, PackageCheck } from 'lucide-react';
 import { type Project, type ProjectStatus } from './ReviewPortal';
 
 interface TimelineStep {
@@ -14,63 +14,47 @@ interface TimelineStep {
 
 const TIMELINE_STEPS: TimelineStep[] = [
   {
+    id: 'tl-received',
+    status: 'ORDER_RECEIVED',
+    label: 'Order Received',
+    description: 'Payment confirmed — your order is in the queue',
+    icon: ClipboardList,
+  },
+  {
     id: 'tl-production',
     status: 'IN_PRODUCTION',
     label: 'In Production',
-    description: 'Artist is working on your portrait',
+    description: 'Artist is hand-crafting your portrait',
     icon: Brush,
-  },
-  {
-    id: 'tl-draft',
-    status: 'DRAFT_READY',
-    label: 'Draft Uploaded',
-    description: 'First draft ready for your review',
-    icon: Eye,
-  },
-  {
-    id: 'tl-review',
-    status: 'UNDER_REVIEW',
-    label: 'Under Review',
-    description: 'You are reviewing the current draft',
-    icon: Clock,
-  },
-  {
-    id: 'tl-revision',
-    status: 'REVISION_REQUESTED',
-    label: 'Revision Requested',
-    description: 'Artist is implementing your feedback',
-    icon: AlertCircle,
-  },
-  {
-    id: 'tl-approved',
-    status: 'FINAL_APPROVED',
-    label: 'Approved',
-    description: 'Final artwork approved — preparing for delivery',
-    icon: Check,
   },
   {
     id: 'tl-shipped',
     status: 'SHIPPED',
     label: 'Shipped',
-    description: 'Your portrait is on its way',
+    description: 'Your portrait is on the way',
     icon: Truck,
+  },
+  {
+    id: 'tl-delivered',
+    status: 'DELIVERED',
+    label: 'Delivered',
+    description: 'Enjoy your Kalakriti artwork',
+    icon: PackageCheck,
   },
 ];
 
 const STATUS_ORDER: ProjectStatus[] = [
+  'ORDER_RECEIVED',
   'IN_PRODUCTION',
-  'DRAFT_READY',
-  'UNDER_REVIEW',
-  'REVISION_REQUESTED',
-  'FINAL_APPROVED',
   'SHIPPED',
+  'DELIVERED',
 ];
 
 export default function ProjectTimeline({ project }: { project: Project }) {
   const currentIndex = STATUS_ORDER.indexOf(project.status);
 
   return (
-    <div className="bg-white rounded-sm border border-[hsl(var(--border))] p-5">
+    <div className="bg-white rounded-sm border border-[hsl(var(--border))] p-5" data-testid="project-timeline">
       <h3 className="font-body text-sm font-600 text-[#2C1810] mb-5">Project Timeline</h3>
 
       <div className="relative">
@@ -78,17 +62,14 @@ export default function ProjectTimeline({ project }: { project: Project }) {
         <div className="absolute left-3.5 top-4 bottom-4 w-px bg-[hsl(var(--border))]" />
 
         <div className="space-y-5">
-          {TIMELINE_STEPS.map((step, index) => {
+          {TIMELINE_STEPS.map((step) => {
             const stepIndex = STATUS_ORDER.indexOf(step.status);
             const isCompleted = stepIndex < currentIndex;
             const isActive = stepIndex === currentIndex;
             const isFuture = stepIndex > currentIndex;
 
-            // Handle revision loop — if status cycled back
-            const isRevisionLoop = step.status === 'REVISION_REQUESTED' && project.revisionsUsed > 0;
-
             return (
-              <div key={step.id} className="relative flex items-start gap-3">
+              <div key={step.id} className="relative flex items-start gap-3" data-testid={`timeline-step-${step.status}`}>
                 {/* Icon bubble */}
                 <div
                   className={`relative z-10 w-7 h-7 rounded-full border flex items-center justify-center flex-shrink-0 transition-all ${
@@ -119,9 +100,6 @@ export default function ProjectTimeline({ project }: { project: Project }) {
                     }`}
                   >
                     {step.label}
-                    {isRevisionLoop && step.status === 'REVISION_REQUESTED' && (
-                      <span className="ml-1.5 font-400 text-[#9C8878]">×{project.revisionsUsed}</span>
-                    )}
                   </p>
                   {(isActive || isCompleted) && (
                     <p className="font-body text-xs text-[#9C8878] mt-0.5">{step.description}</p>

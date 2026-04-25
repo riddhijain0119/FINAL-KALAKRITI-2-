@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import { Toaster } from 'sonner';
 import ProjectTimeline from './ProjectTimeline';
 import DraftViewer from './DraftViewer';
-import RevisionThread from './RevisionThread';
 import ReviewActions from './ReviewActions';
 import ProjectHeader from './ProjectHeader';
 
 // Backend: fetch from /api/projects/[id] — replace with real project data
+// Simplified 4-stage flow: full upfront payment, no draft/revision portal.
 export type ProjectStatus =
-'IN_PRODUCTION' | 'DRAFT_READY' | 'UNDER_REVIEW' | 'REVISION_REQUESTED' | 'FINAL_APPROVED' | 'SHIPPED';
+'ORDER_RECEIVED' | 'IN_PRODUCTION' | 'SHIPPED' | 'DELIVERED';
 
 export interface AnnotationPin {
   id: string;
@@ -65,7 +65,7 @@ const MOCK_PROJECT: Project = {
   medium: 'Watercolour',
   size: 'A3 (12×16 in)',
   faces: 2,
-  status: 'UNDER_REVIEW',
+  status: 'IN_PRODUCTION',
   startedAt: '03 Apr 2026',
   estimatedDelivery: '12 Apr 2026',
   revisionsIncluded: 2,
@@ -132,15 +132,10 @@ const MOCK_PROJECT: Project = {
 
 export default function ReviewPortal() {
   const [project, setProject] = useState<Project>(MOCK_PROJECT);
-  const [activeAnnotations, setActiveAnnotations] = useState<AnnotationPin[]>(
+  const [activeAnnotations] = useState<AnnotationPin[]>(
     MOCK_PROJECT.revisions[MOCK_PROJECT.revisions.length - 1]?.annotations || []
   );
   const [newPins, setNewPins] = useState<AnnotationPin[]>([]);
-
-  const handleStatusChange = (newStatus: ProjectStatus) => {
-    // Backend integration: PATCH /api/projects/[id]/review { status: newStatus }
-    setProject((prev) => ({ ...prev, status: newStatus }));
-  };
 
   const handleAddPin = (pin: AnnotationPin) => {
     setNewPins((prev) => [...prev, pin]);
@@ -149,6 +144,9 @@ export default function ReviewPortal() {
   const handleRemovePin = (pinId: string) => {
     setNewPins((prev) => prev.filter((p) => p.id !== pinId));
   };
+
+  // Suppress unused-var warning while we keep the page lightweight
+  void setProject;
 
   const allPins = [...activeAnnotations, ...newPins];
 
@@ -163,10 +161,9 @@ export default function ReviewPortal() {
       <div className="max-w-screen-2xl mx-auto px-6 lg:px-10 py-6">
         <div className="flex flex-col xl:flex-row gap-6">
 
-          {/* Left sidebar: Timeline + Revision thread */}
+          {/* Left sidebar: Timeline */}
           <div className="xl:w-80 flex-shrink-0 space-y-4">
             <ProjectTimeline project={project} />
-            <RevisionThread project={project} />
           </div>
 
           {/* Center: Draft viewer */}
@@ -177,18 +174,13 @@ export default function ReviewPortal() {
               newPins={newPins}
               onAddPin={handleAddPin}
               onRemovePin={handleRemovePin} />
-            
+
           </div>
         </div>
 
-        {/* Bottom action bar */}
+        {/* Bottom: Status info */}
         <div className="mt-6">
-          <ReviewActions
-            project={project}
-            newPins={newPins}
-            onStatusChange={handleStatusChange}
-            onClearPins={() => setNewPins([])} />
-          
+          <ReviewActions project={project} />
         </div>
       </div>
     </div>);

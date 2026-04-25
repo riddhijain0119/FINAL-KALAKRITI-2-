@@ -70,7 +70,7 @@ export default function DraftViewer({
   };
 
   const allPins = pins;
-  const isApproved = project.status === 'FINAL_APPROVED' || project.status === 'SHIPPED';
+  const isApproved = project.status === 'SHIPPED' || project.status === 'DELIVERED';
 
   return (
     <div className="bg-white rounded-sm border border-[hsl(var(--border))] overflow-hidden shadow-luxury">
