@@ -40,9 +40,9 @@ export default function FooterCTA() {
             <div className="flex items-center gap-6 text-xs font-body text-[#FAF6F0]/40">
               <Link href="/home-page" className="hover:text-[#C9A84C] transition-colors">Home</Link>
               <Link href="/portrait-configurator" className="hover:text-[#C9A84C] transition-colors">Create</Link>
+              <Link href="/reviews" className="hover:text-[#C9A84C] transition-colors">Reviews</Link>
+              <Link href="/policies" className="hover:text-[#C9A84C] transition-colors">Policies</Link>
               <Link href="/project-review-portal" className="hover:text-[#C9A84C] transition-colors">My Projects</Link>
-              <span>Privacy</span>
-              <span>Terms</span>
             </div>
 
             <div className="flex items-center gap-3">

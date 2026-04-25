@@ -9,10 +9,10 @@ import {
 import AppLogo from '@/components/ui/AppLogo';
 import {
   ArrowLeft, Save, Plus, Trash2, Upload, RotateCcw,
-  Image as ImageIcon, LayoutGrid, Sparkles, IndianRupee, Megaphone,
+  Image as ImageIcon, LayoutGrid, Sparkles, IndianRupee, Megaphone, FileText,
 } from 'lucide-react';
 
-type SectionKey = 'mediums' | 'hero' | 'gallery' | 'pricing' | 'banner';
+type SectionKey = 'mediums' | 'hero' | 'gallery' | 'pricing' | 'banner' | 'site_text';
 
 const SECTIONS: { key: SectionKey; label: string; icon: any; desc: string }[] = [
   { key: 'mediums', label: 'Mediums', icon: Sparkles, desc: 'Cards on home page (Watercolour, Pencil, Oil, Charcoal…)' },
@@ -20,6 +20,7 @@ const SECTIONS: { key: SectionKey; label: string; icon: any; desc: string }[] = 
   { key: 'gallery', label: 'Gallery', icon: LayoutGrid, desc: 'Gallery page items (image, title, medium, size)' },
   { key: 'pricing', label: 'Pricing', icon: IndianRupee, desc: 'Base prices, size multipliers, frame costs, GST' },
   { key: 'banner',  label: 'Campaign Banner', icon: Megaphone, desc: 'Site-wide promo banner shown above every page' },
+  { key: 'site_text', label: 'Site Text', icon: FileText, desc: 'Headline, policies, contact info, footer text' },
 ];
 
 export default function AdminListingsPage() {
@@ -80,6 +81,7 @@ export default function AdminListingsPage() {
         {active === 'gallery' && <GalleryEditor />}
         {active === 'pricing' && <PricingEditor />}
         {active === 'banner'  && <BannerEditor />}
+        {active === 'site_text' && <SiteTextEditor />}
       </div>
     </main>
   );
@@ -542,6 +544,87 @@ function BannerEditor() {
             {b.text || 'Banner text will appear here'}
           </div>
         </div>
+      </div>
+    </SectionShell>
+  );
+}
+
+// ===== Site Text Editor =====
+const TEXT_FIELDS: { key: string; label: string; type: 'short' | 'long'; help?: string }[] = [
+  { key: 'brand_name',       label: 'Brand name', type: 'short' },
+  { key: 'brand_tagline',    label: 'Brand tagline (eyebrow)', type: 'short', help: 'Small text above hero headline' },
+  { key: 'hero_headline',    label: 'Hero headline (first part)', type: 'short' },
+  { key: 'hero_headline_em', label: 'Hero headline (italic gold part)', type: 'short' },
+  { key: 'hero_subtext',     label: 'Hero subtext', type: 'long' },
+  { key: 'cta_primary',      label: 'Primary CTA button', type: 'short' },
+  { key: 'cta_secondary',    label: 'Secondary CTA button', type: 'short' },
+  { key: 'about_title',      label: 'About section title', type: 'short' },
+  { key: 'about_body',       label: 'About section body', type: 'long' },
+  { key: 'return_policy',    label: 'Return / refund policy', type: 'long', help: 'Shown on /policies page. Also reflected in AI bot answers.' },
+  { key: 'shipping_policy',  label: 'Shipping policy', type: 'long' },
+  { key: 'privacy_policy',   label: 'Privacy policy', type: 'long' },
+  { key: 'terms',            label: 'Terms & conditions', type: 'long' },
+  { key: 'contact_email',    label: 'Contact email', type: 'short' },
+  { key: 'contact_phone',    label: 'Contact phone (display)', type: 'short' },
+  { key: 'contact_address',  label: 'Studio address', type: 'short' },
+  { key: 'whatsapp_number',  label: 'WhatsApp number (digits, no +)', type: 'short', help: 'For wa.me links. Example: 919667788175' },
+  { key: 'instagram_url',    label: 'Instagram URL', type: 'short' },
+  { key: 'footer_blurb',     label: 'Footer description', type: 'long' },
+];
+
+function SiteTextEditor() {
+  const [data, setData] = useState<Record<string, string> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const d = await fetchContent<Record<string, string>>('site_text');
+    setData(d);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!data) return;
+    setSaving(true);
+    try { await api('/api/admin/content/site_text', { method: 'PUT', body: JSON.stringify({ data }) }); alert('Saved'); }
+    catch (e: any) { alert('Failed: ' + (e?.message || 'unknown')); }
+    finally { setSaving(false); }
+  };
+  const reset = async () => {
+    if (!confirm('Reset all site text to defaults?')) return;
+    await api('/api/admin/content/site_text/reset', { method: 'POST' });
+    await load();
+  };
+
+  if (loading || !data) return <div className="text-center text-[#9C8878] py-10">Loading…</div>;
+
+  return (
+    <SectionShell title="Site Text" onSave={save} onReset={reset} saving={saving}>
+      <p className="text-sm text-[#9C8878] mb-6">All text shown across the site — homepage copy, policy pages, contact info, footer. The AI chatbot also references the return policy.</p>
+      <div className="space-y-5">
+        {TEXT_FIELDS.map((f) => (
+          <Field key={f.key} label={f.label} testid={`sitetext-${f.key}`}>
+            {f.type === 'long' ? (
+              <textarea
+                rows={4}
+                value={data[f.key] || ''}
+                onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                className={inputCls}
+                data-testid={`sitetext-input-${f.key}`}
+              />
+            ) : (
+              <input
+                value={data[f.key] || ''}
+                onChange={(e) => setData({ ...data, [f.key]: e.target.value })}
+                className={inputCls}
+                data-testid={`sitetext-input-${f.key}`}
+              />
+            )}
+            {f.help && <p className="text-xs text-[#9C8878] mt-1">{f.help}</p>}
+          </Field>
+        ))}
       </div>
     </SectionShell>
   );
