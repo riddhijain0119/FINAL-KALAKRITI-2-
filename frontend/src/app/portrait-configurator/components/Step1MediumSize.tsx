@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Check, Clock, Info } from 'lucide-react';
 import { useWizardStore } from '@/lib/state/wizardStore';
 import { type Medium, type SizeKey, MEDIUM_BASE_PRICES, SIZE_MULTIPLIERS, MEDIUM_DAYS, getMediumLabel, getSizeLabel } from '@/lib/pricing/engine';
+import { usePricingVersion } from '@/lib/pricing/usePricingVersion';
 
 const MEDIUMS: { key: Medium; description: string; tag?: string; image: string }[] = [
   { key: 'watercolor', description: 'Soft washes, luminous depth, most expressive', tag: 'Most Popular',
@@ -25,6 +26,7 @@ const SIZES: SizeKey[] = ['A4', 'A3', 'A2'];
 
 export default function Step1MediumSize() {
   const { medium, sizeKey, setMedium, setSizeKey, nextStep, markStepComplete } = useWizardStore();
+  usePricingVersion(); // re-render when admin updates CMS pricing
 
   const handleContinue = () => {
     markStepComplete(1);

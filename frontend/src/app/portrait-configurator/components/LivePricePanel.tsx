@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useWizardStore } from '@/lib/state/wizardStore';
 import { formatINR, getMediumLabel, getSizeLabel } from '@/lib/pricing/engine';
+import { usePricingVersion } from '@/lib/pricing/usePricingVersion';
 
 export default function LivePricePanel() {
   const { priceBreakdown, medium, sizeKey, faces, frameOption, rushDelivery } = useWizardStore();
+  usePricingVersion(); // re-render when admin updates CMS pricing
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [isPulsing, setIsPulsing] = useState(false);
   const prevTotal = useRef<number>(0);

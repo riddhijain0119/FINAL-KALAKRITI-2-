@@ -62,6 +62,13 @@
   with hardcoded fallback (no breakage if API unreachable).
 - Auth: uses existing Emergent Google login; `ADMIN_EMAILS=riddhijain0119@gmail.com`.
 
+## Pricing CMS wired through (25 Apr 2026)
+- Admin price edits at `/admin/listings → Pricing` now flow through to the live portrait configurator end-to-end.
+- `engine.ts` constants converted to mutable `let` bindings + new `applyPricingOverrides()` and `loadPricingFromCMS()` exports.
+- `usePricingVersion()` React hook + `subscribeToPricing()` listener trigger re-renders when CMS pricing changes.
+- `PricingLoader.tsx` mounted at the configurator entry calls the CMS once and forces wizard recalc.
+- Verified live: setting watercolour base = ₹9,999 in CMS → configurator shows "from ₹9,999" + live estimate ₹11,799 (incl. GST). Reset restores defaults.
+
 ## Backlog / Next Steps (updated 25 Apr 2026)
 - ✅ DONE: ReviewPortal timeline simplified to Order Received → In Production → Shipped → Delivered.
   Removed RevisionThread + draft/approve flow (full upfront payment, direct ship model).

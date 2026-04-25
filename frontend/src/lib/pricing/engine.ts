@@ -33,8 +33,8 @@ export interface PriceBreakdown {
   estimatedDays: number;
 }
 
-// Base prices per medium (INR) — Backend: fetch from products/medium table
-const MEDIUM_BASE_PRICES: Record<Medium, number> = {
+// Base prices per medium (INR) — defaults; overridden at runtime by CMS via applyPricingOverrides()
+let MEDIUM_BASE_PRICES: Record<Medium, number> = {
   watercolor: 2800,
   pencil: 1800,
   oil: 4500,
@@ -43,8 +43,8 @@ const MEDIUM_BASE_PRICES: Record<Medium, number> = {
   pastel: 3200,
 };
 
-// Size area multipliers — Backend: fetch from products/sizes table
-const SIZE_MULTIPLIERS: Record<SizeKey, number> = {
+// Size area multipliers
+let SIZE_MULTIPLIERS: Record<SizeKey, number> = {
   A4: 1.0,        // 8.27 × 11.69 in = ~96.7 sq in
   A3: 1.45,       // 11.69 × 16.54 in = ~193 sq in
   A2: 2.1,        // 16.54 × 23.39 in = ~387 sq in
@@ -54,8 +54,8 @@ const SIZE_MULTIPLIERS: Record<SizeKey, number> = {
   '24x30': 3.2,
 };
 
-// Frame costs in INR — Backend: fetch from products/frames table
-const FRAME_COSTS: Record<FrameOption, number> = {
+// Frame costs in INR
+let FRAME_COSTS: Record<FrameOption, number> = {
   none: 0,
   'classic-wood': 1200,
   'ornate-gold': 2200,
@@ -64,7 +64,7 @@ const FRAME_COSTS: Record<FrameOption, number> = {
 };
 
 // Estimated production days per medium
-const MEDIUM_DAYS: Record<Medium, number> = {
+let MEDIUM_DAYS: Record<Medium, number> = {
   watercolor: 7,
   pencil: 5,
   oil: 14,
@@ -74,15 +74,83 @@ const MEDIUM_DAYS: Record<Medium, number> = {
 };
 
 // Add-on prices
-const ADDON_PRICES = {
+let ADDON_PRICES = {
   digitalCopy: 299,
   certificateOfAuthenticity: 499,
   rushDelivery: 0, // Calculated separately as percentage
 };
 
-const GST_RATE = 0.18;
-const RUSH_DELIVERY_SURCHARGE = 0.35; // 35% surcharge
-const DEPOSIT_PERCENTAGE = 0.5; // 50% upfront
+let GST_RATE = 0.18;
+let RUSH_DELIVERY_SURCHARGE = 0.35; // 35% surcharge
+const DEPOSIT_PERCENTAGE = 1.0; // Full payment only — no advance/deposit flow
+
+/**
+ * Apply pricing overrides fetched from `/api/content/pricing` (admin CMS).
+ * Any keys not present in the override remain at their hardcoded defaults.
+ * Listeners (registered via subscribeToPricing) are notified after merge.
+ */
+export interface PricingOverrides {
+  medium_base_prices?: Partial<Record<string, number>>;
+  size_multipliers?: Partial<Record<string, number>>;
+  frame_costs?: Partial<Record<string, number>>;
+  medium_days?: Partial<Record<string, number>>;
+  addon_prices?: { digital_copy?: number; certificate_of_authenticity?: number };
+  gst_rate?: number;
+  rush_delivery_surcharge?: number;
+}
+
+const _listeners = new Set<() => void>();
+let _version = 0;
+
+export function getPricingVersion(): number { return _version; }
+
+export function subscribeToPricing(cb: () => void): () => void {
+  _listeners.add(cb);
+  return () => _listeners.delete(cb);
+}
+
+export function applyPricingOverrides(o: PricingOverrides | null | undefined): void {
+  if (!o) return;
+  if (o.medium_base_prices) {
+    MEDIUM_BASE_PRICES = { ...MEDIUM_BASE_PRICES, ...(o.medium_base_prices as Record<Medium, number>) };
+  }
+  if (o.size_multipliers) {
+    SIZE_MULTIPLIERS = { ...SIZE_MULTIPLIERS, ...(o.size_multipliers as Record<SizeKey, number>) };
+  }
+  if (o.frame_costs) {
+    FRAME_COSTS = { ...FRAME_COSTS, ...(o.frame_costs as Record<FrameOption, number>) };
+  }
+  if (o.medium_days) {
+    MEDIUM_DAYS = { ...MEDIUM_DAYS, ...(o.medium_days as Record<Medium, number>) };
+  }
+  if (o.addon_prices) {
+    ADDON_PRICES = {
+      ...ADDON_PRICES,
+      ...(o.addon_prices.digital_copy !== undefined ? { digitalCopy: o.addon_prices.digital_copy } : {}),
+      ...(o.addon_prices.certificate_of_authenticity !== undefined ? { certificateOfAuthenticity: o.addon_prices.certificate_of_authenticity } : {}),
+    };
+  }
+  if (typeof o.gst_rate === 'number') GST_RATE = o.gst_rate;
+  if (typeof o.rush_delivery_surcharge === 'number') RUSH_DELIVERY_SURCHARGE = o.rush_delivery_surcharge;
+  _version += 1;
+  _listeners.forEach((fn) => fn());
+}
+
+/**
+ * One-shot loader: fetch latest pricing from CMS and apply overrides.
+ * Safe to call multiple times — last write wins. Silently ignores network failure.
+ */
+export async function loadPricingFromCMS(): Promise<void> {
+  try {
+    const base = process.env.NEXT_PUBLIC_BACKEND_URL || '';
+    const res = await fetch(`${base}/api/content/pricing`, { credentials: 'include' });
+    if (!res.ok) return;
+    const json = await res.json();
+    applyPricingOverrides(json?.data as PricingOverrides);
+  } catch {
+    /* offline / network error — keep defaults */
+  }
+}
 
 /**
  * Non-linear complexity multiplier based on face count

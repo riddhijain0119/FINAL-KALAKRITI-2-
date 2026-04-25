@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Check, Package, Zap, Award, FileImage } from 'lucide-react';
 import { useWizardStore } from '@/lib/state/wizardStore';
 import { type FrameOption, FRAME_COSTS } from '@/lib/pricing/engine';
+import { usePricingVersion } from '@/lib/pricing/usePricingVersion';
 
 const FRAME_OPTIONS: { key: FrameOption; label: string; description: string; image?: string }[] = [
   { key: 'none', label: 'No Frame', description: 'Unframed print delivered in an archival tube — ready to frame locally' },
@@ -55,6 +56,7 @@ export default function Step3FramingAddons() {
     prevStep,
     markStepComplete,
   } = useWizardStore();
+  usePricingVersion(); // re-render when admin updates CMS pricing
 
   const handleContinue = () => {
     markStepComplete(3);

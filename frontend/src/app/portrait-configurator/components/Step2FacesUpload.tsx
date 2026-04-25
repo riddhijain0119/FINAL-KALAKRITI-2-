@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Upload, X, AlertTriangle, CheckCircle, Minus, Plus, Image as ImageIcon } from 'lucide-react';
 import { useWizardStore, type UploadedFile } from '@/lib/state/wizardStore';
 import { calculateComplexityMultiplier, MEDIUM_BASE_PRICES, SIZE_MULTIPLIERS } from '@/lib/pricing/engine';
+import { usePricingVersion } from '@/lib/pricing/usePricingVersion';
 
 // Minimum resolution for acceptable portrait quality
 const MIN_WIDTH = 800;
@@ -52,6 +53,7 @@ export default function Step2FacesUpload() {
     medium,
     sizeKey,
   } = useWizardStore();
+  usePricingVersion(); // re-render when admin updates CMS pricing
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
