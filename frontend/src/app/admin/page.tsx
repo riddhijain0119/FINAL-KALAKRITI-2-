@@ -83,6 +83,9 @@ export default function AdminDashboardPage() {
           <Link href="/admin/listings" data-testid="manage-listings-link" className="text-sm flex items-center gap-1.5 text-[#E8C96A] hover:text-[#FAF6F0] border border-[#E8C96A]/30 px-3 py-1.5 rounded-sm">
             Manage Listings
           </Link>
+          <Link href="/admin/coupons" data-testid="manage-coupons-link" className="text-sm flex items-center gap-1.5 text-[#E8C96A] hover:text-[#FAF6F0] border border-[#E8C96A]/30 px-3 py-1.5 rounded-sm">
+            Coupons
+          </Link>
           <span className="text-sm text-[#E0D5C8]" data-testid="admin-user-email">{me?.email}</span>
           <button onClick={logout} data-testid="admin-logout-btn" className="text-sm flex items-center gap-1.5 text-[#E8C96A] hover:text-[#FAF6F0]"><LogOut size={14}/>Logout</button>
         </div>

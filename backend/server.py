@@ -1013,8 +1013,168 @@ DEFAULT_CMS_CONTENT: Dict[str, Any] = {
         'addon_prices': {'digital_copy': 299, 'certificate_of_authenticity': 499},
         'gst_rate': 0.18,
         'rush_delivery_surcharge': 0.35,
+    },
+    'banner': {
+        'enabled': False,
+        'text': '🎉 Diwali Sale — 20% off all portraits till 10 Nov. Use code DIWALI20',
+        'link': '/portrait-configurator',
+        'bg_color': '#2C1810',
+        'text_color': '#E8C96A',
+        'starts_at': '',  # ISO datetime; empty = always start
+        'ends_at': '',    # ISO datetime; empty = never end
     }
 }
+
+
+# ==================== Coupons ====================
+class CouponBody(BaseModel):
+    code: str
+    type: str = 'percent'  # 'percent' | 'flat'
+    value: float           # 10 (percent) or 500 (flat ₹)
+    min_order: float = 0
+    max_uses: int = 0      # 0 = unlimited
+    starts_at: str = ''    # ISO date
+    ends_at: str = ''      # ISO date
+    medium_filter: str = ''  # '' = any, else lowercase medium key e.g. 'oil'
+    enabled: bool = True
+
+
+def _coupon_status(c: dict, now: datetime) -> str:
+    if not c.get('enabled'): return 'disabled'
+    starts = c.get('starts_at')
+    ends = c.get('ends_at')
+    try:
+        if starts and datetime.fromisoformat(starts.replace('Z','+00:00')) > now: return 'scheduled'
+        if ends and datetime.fromisoformat(ends.replace('Z','+00:00')) < now: return 'expired'
+    except Exception: pass
+    if c.get('max_uses') and c.get('used_count', 0) >= c['max_uses']: return 'exhausted'
+    return 'active'
+
+
+@api_router.get('/admin/coupons')
+async def list_coupons(request: Request):
+    await require_admin(request)
+    docs = await db.coupons.find({}, {'_id': 0}).sort('created_at', -1).to_list(500)
+    now = datetime.now(timezone.utc)
+    for d in docs:
+        d['status'] = _coupon_status(d, now)
+    return docs
+
+
+@api_router.post('/admin/coupons')
+async def create_coupon(body: CouponBody, request: Request):
+    await require_admin(request)
+    code = body.code.upper().strip()
+    if not code:
+        raise HTTPException(status_code=400, detail='Code required')
+    if body.type not in ('percent', 'flat'):
+        raise HTTPException(status_code=400, detail='Type must be percent or flat')
+    existing = await db.coupons.find_one({'code': code})
+    if existing:
+        raise HTTPException(status_code=409, detail='Coupon code already exists')
+    doc = body.model_dump()
+    doc['code'] = code
+    doc['used_count'] = 0
+    doc['created_at'] = datetime.now(timezone.utc).isoformat()
+    await db.coupons.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api_router.patch('/admin/coupons/{code}')
+async def update_coupon(code: str, body: CouponBody, request: Request):
+    await require_admin(request)
+    code_u = code.upper()
+    update = body.model_dump()
+    update['code'] = body.code.upper().strip() or code_u
+    r = await db.coupons.update_one({'code': code_u}, {'$set': update})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail='Coupon not found')
+    return await db.coupons.find_one({'code': update['code']}, {'_id': 0})
+
+
+@api_router.delete('/admin/coupons/{code}')
+async def delete_coupon(code: str, request: Request):
+    await require_admin(request)
+    r = await db.coupons.delete_one({'code': code.upper()})
+    if r.deleted_count == 0:
+        raise HTTPException(status_code=404, detail='Coupon not found')
+    return {'ok': True}
+
+
+@api_router.post('/coupons/validate')
+async def validate_coupon(request: Request):
+    """Public — given {code, amount, medium} returns discount or 400."""
+    body = await request.json()
+    code = (body.get('code') or '').upper().strip()
+    amount = float(body.get('amount') or 0)
+    medium = (body.get('medium') or '').lower()
+    if not code:
+        raise HTTPException(status_code=400, detail='Code required')
+    c = await db.coupons.find_one({'code': code}, {'_id': 0})
+    if not c:
+        raise HTTPException(status_code=404, detail='Invalid coupon code')
+    now = datetime.now(timezone.utc)
+    status = _coupon_status(c, now)
+    if status != 'active':
+        raise HTTPException(status_code=400, detail=f'Coupon is {status}')
+    if amount < float(c.get('min_order') or 0):
+        raise HTTPException(status_code=400, detail=f"Minimum order ₹{c['min_order']:.0f} required for this code")
+    mf = (c.get('medium_filter') or '').lower()
+    if mf and medium and mf != medium:
+        raise HTTPException(status_code=400, detail=f"Code valid only on {mf} portraits")
+    if c['type'] == 'percent':
+        discount = round(amount * (float(c['value']) / 100.0), 2)
+    else:
+        discount = round(min(float(c['value']), amount), 2)
+    final = max(round(amount - discount, 2), 0)
+    return {'code': code, 'discount': discount, 'final_amount': final,
+            'type': c['type'], 'value': c['value'], 'message': f"₹{discount:.0f} off applied"}
+
+
+@api_router.post('/orders/{order_id}/apply-coupon')
+async def apply_coupon_to_order(order_id: str, request: Request):
+    """Validates coupon against given order, applies discount, increments used_count."""
+    body = await request.json()
+    code = (body.get('code') or '').upper().strip()
+    order = await db.orders.find_one({'order_id': order_id}, {'_id': 0})
+    if not order:
+        raise HTTPException(status_code=404, detail='Order not found')
+    if order.get('payment_status') == 'SUCCESS':
+        raise HTTPException(status_code=400, detail='Order already paid')
+    original = float(order.get('original_amount') or order.get('amount') or 0)
+    medium = ''
+    items = order.get('items') or []
+    if items:
+        medium = (items[0].get('medium') or '').lower()
+    # validate
+    c = await db.coupons.find_one({'code': code}, {'_id': 0})
+    if not c:
+        raise HTTPException(status_code=404, detail='Invalid coupon code')
+    now = datetime.now(timezone.utc)
+    status = _coupon_status(c, now)
+    if status != 'active':
+        raise HTTPException(status_code=400, detail=f'Coupon is {status}')
+    if original < float(c.get('min_order') or 0):
+        raise HTTPException(status_code=400, detail=f"Minimum order ₹{c['min_order']:.0f} required")
+    mf = (c.get('medium_filter') or '').lower()
+    if mf and medium and mf != medium:
+        raise HTTPException(status_code=400, detail=f"Code valid only on {mf} portraits")
+    if c['type'] == 'percent':
+        discount = round(original * (float(c['value']) / 100.0), 2)
+    else:
+        discount = round(min(float(c['value']), original), 2)
+    final = max(round(original - discount, 2), 0)
+    await db.orders.update_one({'order_id': order_id}, {'$set': {
+        'amount': final,
+        'original_amount': original,
+        'coupon_code': code,
+        'coupon_discount': discount,
+        'updated_at': now,
+    }})
+    await db.coupons.update_one({'code': code}, {'$inc': {'used_count': 1}})
+    return {'ok': True, 'discount': discount, 'amount': final, 'original_amount': original, 'coupon_code': code,
+            'message': f"₹{discount:.0f} off applied with {code}"}
 
 
 @api_router.get('/content/{section}')

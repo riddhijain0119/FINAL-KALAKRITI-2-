@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import '../styles/tailwind.css';
 import AIChatBot from '@/components/AIChatBot';
+import SiteBanner from '@/components/SiteBanner';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-body bg-rice-paper antialiased">{children}
+      <body className="font-body bg-rice-paper antialiased"><SiteBanner />{children}
 <AIChatBot />
 </body>
     </html>

@@ -9,16 +9,17 @@ import {
 import AppLogo from '@/components/ui/AppLogo';
 import {
   ArrowLeft, Save, Plus, Trash2, Upload, RotateCcw,
-  Image as ImageIcon, LayoutGrid, Sparkles, IndianRupee,
+  Image as ImageIcon, LayoutGrid, Sparkles, IndianRupee, Megaphone,
 } from 'lucide-react';
 
-type SectionKey = 'mediums' | 'hero' | 'gallery' | 'pricing';
+type SectionKey = 'mediums' | 'hero' | 'gallery' | 'pricing' | 'banner';
 
 const SECTIONS: { key: SectionKey; label: string; icon: any; desc: string }[] = [
   { key: 'mediums', label: 'Mediums', icon: Sparkles, desc: 'Cards on home page (Watercolour, Pencil, Oil, Charcoal…)' },
   { key: 'hero',    label: 'Hero',    icon: ImageIcon, desc: 'Before/After transformations on the homepage hero' },
   { key: 'gallery', label: 'Gallery', icon: LayoutGrid, desc: 'Gallery page items (image, title, medium, size)' },
   { key: 'pricing', label: 'Pricing', icon: IndianRupee, desc: 'Base prices, size multipliers, frame costs, GST' },
+  { key: 'banner',  label: 'Campaign Banner', icon: Megaphone, desc: 'Site-wide promo banner shown above every page' },
 ];
 
 export default function AdminListingsPage() {
@@ -78,6 +79,7 @@ export default function AdminListingsPage() {
         {active === 'hero'    && <HeroEditor />}
         {active === 'gallery' && <GalleryEditor />}
         {active === 'pricing' && <PricingEditor />}
+        {active === 'banner'  && <BannerEditor />}
       </div>
     </main>
   );
@@ -446,6 +448,99 @@ function PricingEditor() {
               onChange={(e) => setData({ ...data, rush_delivery_surcharge: Number(e.target.value) })}
               data-testid="price-rush" />
           </Field>
+        </div>
+      </div>
+    </SectionShell>
+  );
+}
+
+// ===== Banner Editor =====
+interface CmsBanner {
+  enabled: boolean;
+  text: string;
+  link: string;
+  bg_color: string;
+  text_color: string;
+  starts_at: string;
+  ends_at: string;
+}
+
+function BannerEditor() {
+  const [b, setB] = useState<CmsBanner | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const data = await fetchContent<CmsBanner>('banner');
+    setB(data);
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    if (!b) return;
+    setSaving(true);
+    try { await api('/api/admin/content/banner', { method: 'PUT', body: JSON.stringify({ data: b }) }); alert('Saved'); }
+    catch (e: any) { alert('Failed: ' + (e?.message || 'unknown')); }
+    finally { setSaving(false); }
+  };
+  const reset = async () => {
+    if (!confirm('Reset banner to defaults?')) return;
+    await api('/api/admin/content/banner/reset', { method: 'POST' });
+    await load();
+  };
+  const u = (k: keyof CmsBanner, v: any) => b && setB({ ...b, [k]: v });
+
+  if (loading || !b) return <div className="text-center text-[#9C8878] py-10">Loading…</div>;
+
+  return (
+    <SectionShell title="Campaign Banner" onSave={save} onReset={reset} saving={saving}>
+      <p className="text-sm text-[#9C8878] mb-5">A site-wide promo banner shown above every page (homepage, gallery, configurator, etc.). Toggle off to hide.</p>
+
+      <div className="space-y-5">
+        <div className="flex items-center gap-3 p-4 bg-[#FAF6F0] rounded-sm border border-[#E0D5C8]">
+          <input type="checkbox" id="banner-enabled" checked={b.enabled} onChange={(e) => u('enabled', e.target.checked)} data-testid="banner-enabled"/>
+          <label htmlFor="banner-enabled" className="text-sm font-body text-[#3D3530]">Show banner on the live site</label>
+        </div>
+
+        <Field label="Banner text">
+          <input className={inputCls} value={b.text} onChange={(e) => u('text', e.target.value)} placeholder="🎉 Diwali Sale — 20% off…" data-testid="banner-text"/>
+        </Field>
+
+        <Field label="Link (where banner clicks go)">
+          <input className={inputCls} value={b.link} onChange={(e) => u('link', e.target.value)} placeholder="/portrait-configurator or full URL" data-testid="banner-link"/>
+        </Field>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Field label="Background color (hex)">
+            <div className="flex items-center gap-2">
+              <input type="color" value={b.bg_color} onChange={(e) => u('bg_color', e.target.value)} className="h-10 w-14 rounded-sm border border-[#E0D5C8]"/>
+              <input className={inputCls} value={b.bg_color} onChange={(e) => u('bg_color', e.target.value)} data-testid="banner-bg"/>
+            </div>
+          </Field>
+          <Field label="Text color (hex)">
+            <div className="flex items-center gap-2">
+              <input type="color" value={b.text_color} onChange={(e) => u('text_color', e.target.value)} className="h-10 w-14 rounded-sm border border-[#E0D5C8]"/>
+              <input className={inputCls} value={b.text_color} onChange={(e) => u('text_color', e.target.value)} data-testid="banner-text-color"/>
+            </div>
+          </Field>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Field label="Starts at (optional)">
+            <input type="datetime-local" className={inputCls} value={(b.starts_at || '').slice(0,16)} onChange={(e) => u('starts_at', e.target.value ? new Date(e.target.value).toISOString() : '')}/>
+          </Field>
+          <Field label="Ends at (optional)">
+            <input type="datetime-local" className={inputCls} value={(b.ends_at || '').slice(0,16)} onChange={(e) => u('ends_at', e.target.value ? new Date(e.target.value).toISOString() : '')}/>
+          </Field>
+        </div>
+
+        <div>
+          <p className="text-xs font-body text-[#9C8878] uppercase tracking-widest mb-2">Live preview</p>
+          <div className="rounded-sm py-3 px-5 text-center text-sm font-body" style={{ backgroundColor: b.bg_color, color: b.text_color }} data-testid="banner-preview">
+            {b.text || 'Banner text will appear here'}
+          </div>
         </div>
       </div>
     </SectionShell>

@@ -191,16 +191,28 @@ export default function AIPayPage() {
                   </p>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t border-[#E0D5C8] flex justify-between">
-                <span className="font-body text-sm text-[#3D3530]">Total</span>
-                <span className="font-display text-xl text-[#2C1810]">₹{order.amount}</span>
-              </div>
-              {order.payment_plan === 'advance_25' && (
-                <div className="mt-2 flex justify-between">
-                  <span className="font-body text-xs text-[#9C8878]">Advance due now (25%)</span>
-                  <span className="font-body text-sm text-[#C9A84C]">₹{order.advance_amount}</span>
+
+              {/* Coupon block */}
+              <CouponBlock order={order} onApplied={(o) => setOrder(o)} />
+
+              <div className="mt-3 pt-3 border-t border-[#E0D5C8] space-y-1">
+                {order.coupon_code && order.coupon_discount > 0 && (
+                  <>
+                    <div className="flex justify-between text-xs font-body text-[#9C8878]">
+                      <span>Subtotal</span>
+                      <span>₹{order.original_amount}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-body text-emerald-700">
+                      <span>{order.coupon_code} discount</span>
+                      <span>−₹{order.coupon_discount}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between pt-1">
+                  <span className="font-body text-sm text-[#3D3530]">Total</span>
+                  <span className="font-display text-xl text-[#2C1810]">₹{order.amount}</span>
                 </div>
-              )}
+              </div>
             </div>
             {error && (
               <p data-testid="pay-error" className="text-sm text-red-600 font-body">
@@ -226,6 +238,57 @@ export default function AIPayPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function CouponBlock({ order, onApplied }: { order: any; onApplied: (o: any) => void }) {
+  const [code, setCode] = useState(order?.coupon_code || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const apply = async () => {
+    if (!code.trim()) return;
+    setErr(''); setMsg(''); setBusy(true);
+    try {
+      const r: any = await fetch(`${API_BASE}/api/orders/${order.order_id}/apply-coupon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim().toUpperCase() }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.detail || 'Invalid code');
+      onApplied({ ...order, ...data, coupon_code: data.coupon_code, coupon_discount: data.discount });
+      setMsg(data.message || 'Applied');
+    } catch (e: any) { setErr(e?.message || 'Failed'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-[#E0D5C8]">
+      <p className="font-body text-xs text-[#9C8878] uppercase tracking-wider mb-2">Have a coupon code?</p>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="DIWALI20"
+          disabled={busy || !!order.coupon_code}
+          data-testid="coupon-input"
+          className="flex-1 bg-[#FAF6F0] border border-[#E0D5C8] rounded-sm px-3 py-2 font-mono text-sm text-[#2C1810] uppercase focus:outline-none focus:border-[#C9A84C] disabled:opacity-60"
+        />
+        <button
+          onClick={apply}
+          disabled={busy || !!order.coupon_code || !code.trim()}
+          data-testid="coupon-apply-btn"
+          className="px-4 py-2 bg-[#2C1810] text-[#FAF6F0] font-body text-xs rounded-sm hover:bg-[#1A0E09] disabled:opacity-50"
+        >
+          {busy ? '…' : order.coupon_code ? 'Applied' : 'Apply'}
+        </button>
+      </div>
+      {err && <p className="mt-2 text-xs text-red-600 font-body" data-testid="coupon-error">{err}</p>}
+      {msg && <p className="mt-2 text-xs text-emerald-700 font-body" data-testid="coupon-msg">{msg}</p>}
     </div>
   );
 }
