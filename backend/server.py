@@ -1177,6 +1177,159 @@ async def apply_coupon_to_order(order_id: str, request: Request):
             'message': f"₹{discount:.0f} off applied with {code}"}
 
 
+# ==================== Reviews ====================
+class ReviewBody(BaseModel):
+    order_id: str
+    rating: int = Field(ge=1, le=5)
+    text: str = ''
+    photo_url: str = ''
+
+
+@api_router.post('/reviews')
+async def submit_review(body: ReviewBody, request: Request):
+    """Customer submits a review for one of their delivered orders."""
+    user = await get_current_user(request)
+    order = await db.orders.find_one({'order_id': body.order_id}, {'_id': 0})
+    if not order:
+        raise HTTPException(status_code=404, detail='Order not found')
+    if (order.get('customer_email') or '').lower() != (user['email'] or '').lower():
+        raise HTTPException(status_code=403, detail='Not your order')
+    if order.get('status') not in ('Delivered', 'Shipped', 'Out for Delivery'):
+        raise HTTPException(status_code=400, detail='Reviews allowed only after order ships')
+    existing = await db.reviews.find_one({'order_id': body.order_id, 'customer_email': user['email']})
+    if existing:
+        raise HTTPException(status_code=409, detail='You have already reviewed this order')
+    rid = uuid.uuid4().hex[:12]
+    medium = ((order.get('items') or [{}])[0]).get('medium', '')
+    doc = {
+        'review_id': rid, 'order_id': body.order_id,
+        'customer_name': user.get('name') or order.get('customer_name', ''),
+        'customer_email': user['email'],
+        'rating': body.rating, 'text': body.text.strip()[:1000],
+        'photo_url': body.photo_url, 'medium': medium,
+        'status': 'pending',
+        'created_at': datetime.now(timezone.utc).isoformat(),
+    }
+    await db.reviews.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+
+@api_router.get('/reviews')
+async def list_public_reviews(limit: int = 50):
+    docs = await db.reviews.find({'status': 'approved'}, {'_id': 0, 'customer_email': 0}).sort('created_at', -1).to_list(limit)
+    return docs
+
+
+@api_router.get('/me/reviews')
+async def my_reviews(request: Request):
+    user = await get_current_user(request)
+    docs = await db.reviews.find({'customer_email': user['email']}, {'_id': 0}).sort('created_at', -1).to_list(100)
+    return docs
+
+
+@api_router.get('/admin/reviews')
+async def list_all_reviews(request: Request, status: Optional[str] = None):
+    await require_admin(request)
+    q = {'status': status} if status else {}
+    docs = await db.reviews.find(q, {'_id': 0}).sort('created_at', -1).to_list(500)
+    return docs
+
+
+@api_router.patch('/admin/reviews/{review_id}')
+async def moderate_review(review_id: str, request: Request):
+    """Body: {status: 'approved'|'rejected'}"""
+    await require_admin(request)
+    body = await request.json()
+    new_status = body.get('status')
+    if new_status not in ('approved', 'rejected', 'pending'):
+        raise HTTPException(status_code=400, detail='Invalid status')
+    r = await db.reviews.update_one({'review_id': review_id}, {'$set': {'status': new_status}})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail='Review not found')
+    return await db.reviews.find_one({'review_id': review_id}, {'_id': 0})
+
+
+@api_router.delete('/admin/reviews/{review_id}')
+async def delete_review(review_id: str, request: Request):
+    await require_admin(request)
+    r = await db.reviews.delete_one({'review_id': review_id})
+    if r.deleted_count == 0:
+        raise HTTPException(status_code=404, detail='Review not found')
+    return {'ok': True}
+
+
+# ==================== Email Broadcast ====================
+@api_router.get('/admin/broadcast/audience')
+async def broadcast_audience(request: Request):
+    """Returns count of distinct customer emails grouped by audience type."""
+    await require_admin(request)
+    all_emails = await db.orders.aggregate([
+        {'$match': {'customer_email': {'$ne': None, '$ne': ''}}},
+        {'$group': {'_id': '$customer_email'}},
+    ]).to_list(10000)
+    paid = await db.orders.aggregate([
+        {'$match': {'payment_status': 'SUCCESS', 'customer_email': {'$ne': None, '$ne': ''}}},
+        {'$group': {'_id': '$customer_email'}},
+    ]).to_list(10000)
+    delivered = await db.orders.aggregate([
+        {'$match': {'status': 'Delivered', 'customer_email': {'$ne': None, '$ne': ''}}},
+        {'$group': {'_id': '$customer_email'}},
+    ]).to_list(10000)
+    return {'all': len(all_emails), 'paid': len(paid), 'delivered': len(delivered)}
+
+
+@api_router.post('/admin/broadcast/send')
+async def broadcast_send(request: Request):
+    """Body: {audience: 'all'|'paid'|'delivered', subject, html, dry_run}"""
+    user = await get_current_user(request)
+    if user.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail='Admin only')
+    body = await request.json()
+    audience = body.get('audience', 'all')
+    subject = (body.get('subject') or '').strip()
+    html = (body.get('html') or '').strip()
+    dry_run = bool(body.get('dry_run'))
+    if not subject or not html:
+        raise HTTPException(status_code=400, detail='Subject and HTML body required')
+    match: Dict[str, Any] = {'customer_email': {'$ne': None, '$ne': ''}}
+    if audience == 'paid':
+        match['payment_status'] = 'SUCCESS'
+    elif audience == 'delivered':
+        match['status'] = 'Delivered'
+    docs = await db.orders.aggregate([
+        {'$match': match},
+        {'$group': {'_id': '$customer_email', 'name': {'$first': '$customer_name'}}},
+    ]).to_list(10000)
+    emails = [d['_id'] for d in docs if d.get('_id')]
+    if dry_run:
+        return {'audience': audience, 'recipients': len(emails), 'sample': emails[:5], 'dry_run': True}
+    if not emails:
+        return {'sent': 0, 'recipients': 0, 'message': 'No recipients in this audience'}
+    sent = 0
+    for em in emails:
+        try:
+            await _send_email([em], subject, html)
+            sent += 1
+        except Exception as e:
+            logger.error(f'broadcast email failed {em}: {e}')
+    bid = uuid.uuid4().hex[:12]
+    await db.broadcasts.insert_one({
+        'broadcast_id': bid, 'audience': audience, 'subject': subject,
+        'recipient_count': len(emails), 'sent_count': sent,
+        'sent_by': user['email'],
+        'sent_at': datetime.now(timezone.utc).isoformat(),
+    })
+    return {'broadcast_id': bid, 'recipients': len(emails), 'sent': sent}
+
+
+@api_router.get('/admin/broadcast/history')
+async def broadcast_history(request: Request):
+    await require_admin(request)
+    docs = await db.broadcasts.find({}, {'_id': 0}).sort('sent_at', -1).to_list(50)
+    return docs
+
+
 @api_router.get('/content/{section}')
 async def get_content(section: str):
     """Public endpoint: returns CMS section content. Falls back to default if unset."""

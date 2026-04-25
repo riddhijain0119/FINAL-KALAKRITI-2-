@@ -95,6 +95,9 @@ export default function MyOrdersPage() {
                     <PayBalanceButton order={o} onPaid={() => window.location.reload()} />
                   </div>
                 )}
+                {(o.status === 'Delivered' || o.status === 'Shipped' || o.status === 'Out for Delivery') && (
+                  <ReviewControl orderId={o.order_id} />
+                )}
               </div>
             ))}
           </div>
@@ -102,5 +105,73 @@ export default function MyOrdersPage() {
       </div>
       
     </main>
+  );
+}
+
+function ReviewControl({ orderId }: { orderId: string }) {
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<'submitted'|'already'|null>(null);
+  const [err, setErr] = useState('');
+
+  React.useEffect(() => {
+    api<any[]>('/api/me/reviews').then((rs) => {
+      if (rs.find((r) => r.order_id === orderId)) setDone('already');
+    }).catch(() => {});
+  }, [orderId]);
+
+  if (done) {
+    return (
+      <div className="mt-3 pt-3 border-t border-[#E0D5C8] text-xs text-emerald-700 font-body">
+        ✓ Review submitted{done === 'submitted' ? ' — pending admin approval' : ''}
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <div className="mt-3 pt-3 border-t border-[#E0D5C8]">
+        <button
+          onClick={() => setOpen(true)}
+          data-testid={`leave-review-${orderId}`}
+          className="text-xs px-3 py-1.5 rounded-sm bg-[#C9A84C] text-[#2C1810] hover:bg-[#E8C96A] font-body"
+        >★ Leave a review</button>
+      </div>
+    );
+  }
+
+  const submit = async () => {
+    setBusy(true); setErr('');
+    try {
+      await api('/api/reviews', { method: 'POST', body: JSON.stringify({ order_id: orderId, rating, text }) });
+      setDone('submitted');
+    } catch (e: any) { setErr(e?.message || 'Failed to submit'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-[#E0D5C8] space-y-2" data-testid={`review-form-${orderId}`}>
+      <div className="flex gap-1 text-2xl text-[#C9A84C]">
+        {[1,2,3,4,5].map((n) => (
+          <button key={n} type="button" onClick={() => setRating(n)} data-testid={`star-${orderId}-${n}`} className={n <= rating ? '' : 'opacity-30'}>★</button>
+        ))}
+      </div>
+      <textarea
+        rows={3} value={text} onChange={(e) => setText(e.target.value)}
+        placeholder="Tell us what you loved (optional)…"
+        className="w-full bg-[#FAF6F0] border border-[#E0D5C8] rounded-sm px-3 py-2 text-sm font-body focus:outline-none focus:border-[#C9A84C]"
+        data-testid={`review-text-${orderId}`}
+      />
+      {err && <p className="text-xs text-red-600">{err}</p>}
+      <div className="flex gap-2">
+        <button onClick={submit} disabled={busy} data-testid={`submit-review-${orderId}`}
+          className="text-xs px-4 py-1.5 bg-[#2C1810] text-[#FAF6F0] rounded-sm hover:bg-[#1A0E09] disabled:opacity-60">
+          {busy ? 'Submitting…' : 'Submit review'}
+        </button>
+        <button onClick={() => setOpen(false)} className="text-xs px-3 py-1.5 border border-[#E0D5C8] rounded-sm">Cancel</button>
+      </div>
+    </div>
   );
 }
