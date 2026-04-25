@@ -21,7 +21,8 @@ export default function AdminDashboardPage() {
   const refresh = async () => {
     const [s, list] = await Promise.all([
       api('/api/admin/stats'),
-      api<Order[]>(`/api/orders${filter ? `?status=${encodeURIComponent(filter)}` : ''}`),
+      // Fetch ALL orders so we can group by status client-side
+      api<Order[]>(`/api/orders?limit=500`),
     ]);
     setStats(s); setOrders(list);
   };
@@ -42,7 +43,7 @@ export default function AdminDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { if (me) refresh(); /* eslint-disable-next-line */ }, [filter]);
+  useEffect(() => { if (me) refresh(); /* eslint-disable-next-line */ }, []);
 
   const logout = async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); router.replace('/home-page'); };
 
@@ -57,7 +58,15 @@ export default function AdminDashboardPage() {
 
   if (loading) return <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center text-[#2C1810]">Loading…</div>;
 
-  const filtered = orders.filter(o => !filter ? true : o.status === filter);
+  // Group orders by status. Sections shown only when there is at least one order
+  // in that status, OR when no filter is set (show all sections in canonical order).
+  const visibleStatuses = filter ? [filter] : STATUSES;
+  const groups: Record<string, Order[]> = {};
+  STATUSES.forEach((s) => { groups[s] = []; });
+  orders.forEach((o) => {
+    const s = STATUSES.includes(o.status) ? o.status : 'Placed';
+    (groups[s] ||= []).push(o);
+  });
 
   return (
     <main className="min-h-screen bg-[#FAF6F0]">
@@ -89,49 +98,38 @@ export default function AdminDashboardPage() {
           <StatCard icon={<TrendingUp size={20}/>} label="Revenue" value={`₹${(stats?.revenue ?? 0).toLocaleString('en-IN')}`} />
         </div>
 
-        {/* Filter + table */}
-        <div className="bg-[#FFFDF9] border border-[#E0D5C8] rounded-2xl shadow-luxury overflow-hidden">
-          <div className="p-4 border-b border-[#E0D5C8] flex flex-wrap items-center gap-2 justify-between">
-            <h2 className="font-display text-2xl text-[#2C1810]">Orders</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => setFilter('')} data-testid="filter-all-btn" className={`px-3 py-1.5 rounded-sm text-xs font-body ${!filter ? 'bg-[#2C1810] text-[#FAF6F0]' : 'bg-[#FAF6F0] text-[#3D3530] border border-[#E0D5C8]'}`}>All</button>
-              {STATUSES.map(s => (
-                <button key={s} data-testid={`filter-${s.toLowerCase().replace(/\s/g,'-')}-btn`} onClick={() => setFilter(s)} className={`px-3 py-1.5 rounded-sm text-xs font-body ${filter === s ? 'bg-[#2C1810] text-[#FAF6F0]' : 'bg-[#FAF6F0] text-[#3D3530] border border-[#E0D5C8]'}`}>{s}</button>
-              ))}
-            </div>
+        {/* Filter pills */}
+        <div className="bg-[#FFFDF9] border border-[#E0D5C8] rounded-2xl shadow-luxury p-4 mb-6 flex flex-wrap items-center gap-2 justify-between">
+          <h2 className="font-display text-2xl text-[#2C1810]">Orders by Status</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => setFilter('')} data-testid="filter-all-btn" className={`px-3 py-1.5 rounded-sm text-xs font-body ${!filter ? 'bg-[#2C1810] text-[#FAF6F0]' : 'bg-[#FAF6F0] text-[#3D3530] border border-[#E0D5C8]'}`}>
+              All ({orders.length})
+            </button>
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                data-testid={`filter-${s.toLowerCase().replace(/\s/g,'-')}-btn`}
+                onClick={() => setFilter(s)}
+                className={`px-3 py-1.5 rounded-sm text-xs font-body ${filter === s ? 'bg-[#2C1810] text-[#FAF6F0]' : 'bg-[#FAF6F0] text-[#3D3530] border border-[#E0D5C8]'}`}
+              >
+                {s} ({groups[s].length})
+              </button>
+            ))}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="admin-orders-table">
-              <thead className="bg-[#FAF6F0] text-[#9C8878] text-xs uppercase tracking-widest">
-                <tr><th className="text-left px-4 py-3">Order</th><th className="text-left px-4 py-3">Customer</th><th className="text-left px-4 py-3">Amount</th><th className="text-left px-4 py-3">Payment</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Created</th><th className="px-4 py-3">Actions</th></tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 && (
-                  <tr><td colSpan={7} className="text-center py-10 text-[#9C8878]">No orders.</td></tr>
-                )}
-                {filtered.map((o) => (
-                  <tr key={o.order_id} className="border-t border-[#E0D5C8] hover:bg-[#FAF6F0]/50">
-                    <td className="px-4 py-3 font-mono text-xs text-[#2C1810]" data-testid={`order-row-${o.order_id}`}>{o.order_id}</td>
-                    <td className="px-4 py-3 text-[#2C1810]">{o.customer_name}<br/><span className="text-xs text-[#9C8878]">{o.customer_email}</span></td>
-                    <td className="px-4 py-3 text-[#2C1810]">₹{o.amount}
-                      {o.payment_plan === 'advance_25' && (o.balance_due ?? 0) > 0 && (
-                        <div className="text-xs text-[#A07830]">Bal ₹{o.balance_due}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3"><Badge text={o.payment_status} /></td>
-                    <td className="px-4 py-3"><Badge text={o.status} /></td>
-                    <td className="px-4 py-3 text-xs text-[#9C8878]">{new Date(o.created_at).toLocaleDateString()}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => setEditing(o)} data-testid={`edit-${o.order_id}`} className="px-2 py-1 text-xs bg-[#C9A84C] text-[#2C1810] rounded-sm hover:bg-[#E8C96A]">Update</button>
-                        <button onClick={() => sendWA(o.order_id)} disabled={sending === o.order_id} data-testid={`wa-${o.order_id}`} className="p-1.5 text-[#25D366] hover:bg-[#25D366]/10 rounded-sm" title="Send WhatsApp"><Send size={14}/></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        </div>
+
+        {/* Grouped sections */}
+        <div className="space-y-6">
+          {visibleStatuses.map((s) => (
+            <StatusSection
+              key={s}
+              status={s}
+              orders={groups[s] || []}
+              onEdit={setEditing}
+              onSendWA={sendWA}
+              sending={sending}
+            />
+          ))}
         </div>
       </div>
 
@@ -139,6 +137,71 @@ export default function AdminDashboardPage() {
         <UpdateModal order={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }} />
       )}
     </main>
+  );
+}
+
+function StatusSection({ status, orders, onEdit, onSendWA, sending }: {
+  status: string;
+  orders: Order[];
+  onEdit: (o: Order) => void;
+  onSendWA: (id: string) => void;
+  sending: string;
+}) {
+  const [open, setOpen] = useState(orders.length > 0);
+  return (
+    <section className="bg-[#FFFDF9] border border-[#E0D5C8] rounded-2xl shadow-luxury overflow-hidden" data-testid={`section-${status.toLowerCase().replace(/\s/g,'-')}`}>
+      <button
+        onClick={() => setOpen(!open)}
+        data-testid={`section-toggle-${status.toLowerCase().replace(/\s/g,'-')}`}
+        className="w-full px-5 py-4 border-b border-[#E0D5C8] flex items-center justify-between hover:bg-[#FAF6F0]/40 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Badge text={status} />
+          <span className="font-display text-lg text-[#2C1810]">{orders.length} order{orders.length === 1 ? '' : 's'}</span>
+        </div>
+        <span className="text-sm text-[#9C8878]">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[#FAF6F0] text-[#9C8878] text-xs uppercase tracking-widest">
+              <tr>
+                <th className="text-left px-4 py-3">Order</th>
+                <th className="text-left px-4 py-3">Customer</th>
+                <th className="text-left px-4 py-3">Amount</th>
+                <th className="text-left px-4 py-3">Payment</th>
+                <th className="text-left px-4 py-3">Created</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 && (
+                <tr><td colSpan={6} className="text-center py-8 text-[#9C8878]">No orders in this stage.</td></tr>
+              )}
+              {orders.map((o) => (
+                <tr key={o.order_id} className="border-t border-[#E0D5C8] hover:bg-[#FAF6F0]/50">
+                  <td className="px-4 py-3 font-mono text-xs text-[#2C1810]" data-testid={`order-row-${o.order_id}`}>{o.order_id}</td>
+                  <td className="px-4 py-3 text-[#2C1810]">{o.customer_name}<br/><span className="text-xs text-[#9C8878]">{o.customer_email}</span></td>
+                  <td className="px-4 py-3 text-[#2C1810]">₹{o.amount}
+                    {o.payment_plan === 'advance_25' && (o.balance_due ?? 0) > 0 && (
+                      <div className="text-xs text-[#A07830]">Bal ₹{o.balance_due}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3"><Badge text={o.payment_status} /></td>
+                  <td className="px-4 py-3 text-xs text-[#9C8878]">{new Date(o.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => onEdit(o)} data-testid={`edit-${o.order_id}`} className="px-2 py-1 text-xs bg-[#C9A84C] text-[#2C1810] rounded-sm hover:bg-[#E8C96A]">Update</button>
+                      <button onClick={() => onSendWA(o.order_id)} disabled={sending === o.order_id} data-testid={`wa-${o.order_id}`} className="p-1.5 text-[#25D366] hover:bg-[#25D366]/10 rounded-sm" title="Send WhatsApp"><Send size={14}/></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 

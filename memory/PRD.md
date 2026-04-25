@@ -69,6 +69,12 @@
 - `PricingLoader.tsx` mounted at the configurator entry calls the CMS once and forces wizard recalc.
 - Verified live: setting watercolour base = ₹9,999 in CMS → configurator shows "from ₹9,999" + live estimate ₹11,799 (incl. GST). Reset restores defaults.
 
+## Admin orders grouped by status (25 Apr 2026)
+- Admin dashboard now groups orders into separate collapsible sections per status (Placed / Confirmed / In Production / Shipped / Out for Delivery / Delivered / Cancelled).
+- Filter pills show live count for each stage; "All" pill aggregates total.
+- Each section has its own table with the same Update / WhatsApp action buttons.
+- API change: admin dashboard fetches all orders once with `?limit=500` instead of per-status calls.
+
 ## Backlog / Next Steps (updated 25 Apr 2026)
 - ✅ DONE: ReviewPortal timeline simplified to Order Received → In Production → Shipped → Delivered.
   Removed RevisionThread + draft/approve flow (full upfront payment, direct ship model).
