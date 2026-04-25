@@ -58,3 +58,54 @@ export interface Me {
   picture?: string;
   role: 'admin' | 'customer';
 }
+
+// ===== CMS Listings =====
+export interface CmsMedium {
+  id: string;
+  key: string;
+  name: string;
+  tagline: string;
+  description: string;
+  image: string;
+  image_alt: string;
+  starting_price: number;
+  turnaround: string;
+  tag: string;
+  tag_color: string;
+}
+
+export interface CmsHeroItem {
+  id: string;
+  before: string;
+  before_alt: string;
+  after: string;
+  after_alt: string;
+  medium: string;
+  turnaround: string;
+  size: string;
+}
+
+export interface CmsGalleryItem {
+  id: string;
+  title: string;
+  medium: string;
+  size: string;
+  image: string;
+  alt: string;
+  tag: string;
+}
+
+export interface CmsPricing {
+  medium_base_prices: Record<string, number>;
+  size_multipliers: Record<string, number>;
+  frame_costs: Record<string, number>;
+  medium_days: Record<string, number>;
+  addon_prices: Record<string, number>;
+  gst_rate: number;
+  rush_delivery_surcharge: number;
+}
+
+export async function fetchContent<T = any>(section: string): Promise<T> {
+  const r = await api<{ data: T }>(`/api/content/${section}`);
+  return r.data;
+}

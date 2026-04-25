@@ -1,107 +1,38 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ArrowRight, Filter } from 'lucide-react';
 import Link from 'next/link';
 import KalakritiNav from '@/components/KalakritiNav';
+import { fetchContent, CmsGalleryItem } from '@/lib/api';
 
-const GALLERY_ITEMS = [
-{
-  id: 'g1',
-  title: 'Family Portrait',
-  medium: 'Watercolour',
-  size: '12×16 in',
-  image: "/assets/images/gallery/art-13.jpeg",
-  alt: 'Watercolour family portrait with soft washes',
-  tag: 'Most Popular'
-},
-{
-  id: 'g2',
-  title: 'Pet Portrait',
-  medium: 'Pencil Sketch',
-  size: '8×10 in',
-  image: "/assets/images/gallery/art-14.jpeg",
-  alt: 'Detailed pencil sketch of a pet',
-  tag: null
-},
-{
-  id: 'g3',
-  title: 'Couple Portrait',
-  medium: 'Oil on Canvas',
-  size: '16×20 in',
-  image: "/assets/images/gallery/art-15.jpeg",
-  alt: 'Rich oil painting of a couple',
-  tag: 'Premium'
-},
-{
-  id: 'g4',
-  title: 'Solo Portrait',
-  medium: 'Charcoal',
-  size: '10×12 in',
-  image: "/assets/images/gallery/art-16.jpeg",
-  alt: 'Dramatic charcoal solo portrait',
-  tag: null
-},
-{
-  id: 'g5',
-  title: 'Wedding Portrait',
-  medium: 'Watercolour',
-  size: '14×18 in',
-  image: "/assets/images/gallery/art-17.jpeg",
-  alt: 'Soft watercolour wedding portrait',
-  tag: 'Featured'
-},
-{
-  id: 'g6',
-  title: 'Child Portrait',
-  medium: 'Pencil Sketch',
-  size: '8×10 in',
-  image: "/assets/images/gallery/art-18.jpeg",
-  alt: 'Delicate pencil sketch of a child',
-  tag: null
-},
-{
-  id: 'g7',
-  title: 'Grandparents Portrait',
-  medium: 'Oil on Canvas',
-  size: '18×24 in',
-  image: "/assets/images/gallery/art-19.jpeg",
-  alt: 'Heirloom oil painting of grandparents',
-  tag: 'Heirloom'
-},
-{
-  id: 'g8',
-  title: 'Group Portrait',
-  medium: 'Charcoal',
-  size: '16×20 in',
-  image: "/assets/images/gallery/art-20.jpeg",
-  alt: 'Expressive charcoal group portrait',
-  tag: null
-},
-{
-  id: 'g9',
-  title: 'Mother & Child',
-  medium: 'Watercolour',
-  size: '10×12 in',
-  image: "/assets/images/gallery/art-21.jpeg",
-  alt: 'Tender watercolour of mother and child',
-  tag: null
-}];
-
+const FALLBACK: CmsGalleryItem[] = [
+  { id: 'g1', title: 'Family Portrait', medium: 'Watercolour', size: '12×16 in',
+    image: '/assets/images/gallery/art-13.jpeg', alt: 'Watercolour family portrait', tag: 'Most Popular' },
+  { id: 'g2', title: 'Pet Portrait', medium: 'Pencil Sketch', size: '8×10 in',
+    image: '/assets/images/gallery/art-14.jpeg', alt: 'Pencil sketch of a pet', tag: '' },
+  { id: 'g3', title: 'Couple Portrait', medium: 'Oil on Canvas', size: '16×20 in',
+    image: '/assets/images/gallery/art-15.jpeg', alt: 'Oil painting of a couple', tag: 'Premium' },
+];
 
 const MEDIUMS = ['All', 'Watercolour', 'Pencil Sketch', 'Oil on Canvas', 'Charcoal'];
 
-type GalleryItem = (typeof GALLERY_ITEMS)[0];
-
 export default function GalleryPage() {
+  const [items, setItems] = useState<CmsGalleryItem[]>(FALLBACK);
   const [activeFilter, setActiveFilter] = useState('All');
-  const [lightboxItem, setLightboxItem] = useState<GalleryItem | null>(null);
+  const [lightboxItem, setLightboxItem] = useState<CmsGalleryItem | null>(null);
+
+  useEffect(() => {
+    fetchContent<{ items: CmsGalleryItem[] }>('gallery')
+      .then((d) => { if (d?.items?.length) setItems(d.items); })
+      .catch(() => {});
+  }, []);
 
   const filtered =
   activeFilter === 'All' ?
-  GALLERY_ITEMS :
-  GALLERY_ITEMS.filter((item) => item.medium === activeFilter);
+  items :
+  items.filter((item) => item.medium === activeFilter);
 
   return (
     <>

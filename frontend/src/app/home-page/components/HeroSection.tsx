@@ -4,38 +4,39 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, animate } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { fetchContent, CmsHeroItem } from '@/lib/api';
 
-// Before/After slider data — Backend: replace with CMS-driven transformation gallery
-const TRANSFORMATIONS = [
-{
-  id: 'transform-001',
-  before: "/assets/images/gallery/art-01.jpeg",
-  beforeAlt: 'Original smartphone photo of a woman smiling outdoors, slightly blurred',
-  after: "/assets/images/gallery/art-02.jpeg",
-  afterAlt: 'Museum-quality watercolour portrait of the same woman with warm tones and fine detail',
-  medium: 'Watercolour',
-  turnaround: '7 days',
-  size: 'A3'
-},
-{
-  id: 'transform-002',
-  before: "/assets/images/gallery/art-03.jpeg",
-  beforeAlt: 'Casual smartphone photo of a man in natural light',
-  after: "/assets/images/gallery/art-04.jpeg",
-  afterAlt: 'Fine pencil sketch portrait with detailed shading and artistic depth',
-  medium: 'Pencil Sketch',
-  turnaround: '5 days',
-  size: 'A4'
-}];
+// Fallback transformations — replaced at runtime by CMS content if available
+const FALLBACK: CmsHeroItem[] = [
+  { id: 'transform-001',
+    before: '/assets/images/gallery/art-01.jpeg',
+    before_alt: 'Original photo of a woman smiling',
+    after: '/assets/images/gallery/art-02.jpeg',
+    after_alt: 'Watercolour portrait',
+    medium: 'Watercolour', turnaround: '7 days', size: 'A3' },
+  { id: 'transform-002',
+    before: '/assets/images/gallery/art-03.jpeg',
+    before_alt: 'Casual photo of a man',
+    after: '/assets/images/gallery/art-04.jpeg',
+    after_alt: 'Pencil sketch portrait',
+    medium: 'Pencil Sketch', turnaround: '5 days', size: 'A4' },
+];
 
 
 export default function HeroSection() {
+  const [transformations, setTransformations] = useState<CmsHeroItem[]>(FALLBACK);
   const [sliderX, setSliderX] = useState(50); // percentage 0–100
   const [activeIndex, setActiveIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const transformation = TRANSFORMATIONS[activeIndex];
+  useEffect(() => {
+    fetchContent<{ items: CmsHeroItem[] }>('hero')
+      .then((d) => { if (d?.items?.length) setTransformations(d.items); })
+      .catch(() => {});
+  }, []);
+
+  const transformation = transformations[Math.min(activeIndex, transformations.length - 1)] || FALLBACK[0];
 
   const handlePointerMove = useCallback(
     (clientX: number) => {
@@ -142,7 +143,7 @@ export default function HeroSection() {
           <div className="absolute inset-0">
             <img
               src={transformation.after}
-              alt={transformation.afterAlt}
+              alt={transformation.after_alt}
               className="w-full h-full object-cover"
               draggable={false} />
             
@@ -159,7 +160,7 @@ export default function HeroSection() {
             
             <img
               src={transformation.before}
-              alt={transformation.beforeAlt}
+              alt={transformation.before_alt}
               className="w-full h-full object-cover"
               draggable={false} />
             
@@ -200,7 +201,7 @@ export default function HeroSection() {
 
         {/* Transformation selector dots */}
         <div className="flex items-center gap-2 mt-4">
-          {TRANSFORMATIONS.map((t, i) =>
+          {transformations.map((t, i) =>
           <button
             key={`transform-dot-${t.id}`}
             onClick={() => {setActiveIndex(i);setSliderX(50);}}

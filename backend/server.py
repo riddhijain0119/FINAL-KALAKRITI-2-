@@ -926,6 +926,168 @@ async def ai_chat(body: ChatRequest):
             'uploaded_images': [f'/api/chat/image/{iid}' for iid in stored_image_ids]}
 
 
+# ==================== CMS / Listings ====================
+# Allows admin to manage Mediums, Hero transformations, Gallery items, and Pricing
+# from the admin console without touching code.
+
+DEFAULT_CMS_CONTENT: Dict[str, Any] = {
+    'mediums': {
+        'items': [
+            {'id': 'medium-watercolor', 'key': 'watercolor', 'name': 'Watercolour',
+             'tagline': 'Luminous washes, soft depth',
+             'description': 'Our most popular medium. Transparent layers build depth and emotion — ideal for portraits, landscapes, and sentimental gifts.',
+             'image': '/assets/images/gallery/art-05.jpeg',
+             'image_alt': 'Watercolour portrait sample',
+             'starting_price': 2800, 'turnaround': '7–10 days',
+             'tag': 'Most Popular', 'tag_color': 'bg-[#C9A84C] text-[#2C1810]'},
+            {'id': 'medium-pencil', 'key': 'pencil', 'name': 'Pencil Sketch',
+             'tagline': 'Timeless graphite precision',
+             'description': 'Classic fine-art technique with rich tonal range. The most affordable medium — perfect for minimalist home decor or first portraits.',
+             'image': '/assets/images/gallery/art-06.jpeg',
+             'image_alt': 'Pencil sketch portrait sample',
+             'starting_price': 1800, 'turnaround': '5–7 days',
+             'tag': 'Best Value', 'tag_color': 'bg-[#2C1810] text-[#FAF6F0]'},
+            {'id': 'medium-oil', 'key': 'oil', 'name': 'Oil on Canvas',
+             'tagline': 'Heirloom-grade richness',
+             'description': 'The pinnacle of portrait art. Rich pigment, gallery-quality canvas, and a finish that lasts generations. A true heirloom.',
+             'image': '/assets/images/gallery/art-07.jpeg',
+             'image_alt': 'Oil on canvas portrait sample',
+             'starting_price': 4500, 'turnaround': '14–18 days',
+             'tag': 'Premium', 'tag_color': 'bg-amber-100 text-amber-800'},
+            {'id': 'medium-charcoal', 'key': 'charcoal', 'name': 'Charcoal',
+             'tagline': 'Dramatic contrast, raw emotion',
+             'description': 'Bold shadows and striking highlights create portraits with cinematic drama. Ideal for black-and-white lovers and dramatic compositions.',
+             'image': '/assets/images/gallery/art-08.jpeg',
+             'image_alt': 'Charcoal portrait sample',
+             'starting_price': 2200, 'turnaround': '5–8 days',
+             'tag': '', 'tag_color': ''},
+        ]
+    },
+    'hero': {
+        'items': [
+            {'id': 'transform-001',
+             'before': '/assets/images/gallery/art-01.jpeg',
+             'before_alt': 'Original photo of a woman smiling',
+             'after': '/assets/images/gallery/art-02.jpeg',
+             'after_alt': 'Watercolour portrait of the same woman',
+             'medium': 'Watercolour', 'turnaround': '7 days', 'size': 'A3'},
+            {'id': 'transform-002',
+             'before': '/assets/images/gallery/art-03.jpeg',
+             'before_alt': 'Casual photo of a man',
+             'after': '/assets/images/gallery/art-04.jpeg',
+             'after_alt': 'Pencil sketch portrait of the same man',
+             'medium': 'Pencil Sketch', 'turnaround': '5 days', 'size': 'A4'},
+        ]
+    },
+    'gallery': {
+        'items': [
+            {'id': 'g1', 'title': 'Family Portrait', 'medium': 'Watercolour', 'size': '12×16 in',
+             'image': '/assets/images/gallery/art-13.jpeg', 'alt': 'Watercolour family portrait', 'tag': 'Most Popular'},
+            {'id': 'g2', 'title': 'Pet Portrait', 'medium': 'Pencil Sketch', 'size': '8×10 in',
+             'image': '/assets/images/gallery/art-14.jpeg', 'alt': 'Pencil sketch of a pet', 'tag': ''},
+            {'id': 'g3', 'title': 'Couple Portrait', 'medium': 'Oil on Canvas', 'size': '16×20 in',
+             'image': '/assets/images/gallery/art-15.jpeg', 'alt': 'Oil painting of a couple', 'tag': 'Premium'},
+            {'id': 'g4', 'title': 'Solo Portrait', 'medium': 'Charcoal', 'size': '10×12 in',
+             'image': '/assets/images/gallery/art-16.jpeg', 'alt': 'Charcoal solo portrait', 'tag': ''},
+            {'id': 'g5', 'title': 'Wedding Portrait', 'medium': 'Watercolour', 'size': '14×18 in',
+             'image': '/assets/images/gallery/art-17.jpeg', 'alt': 'Watercolour wedding portrait', 'tag': 'Featured'},
+            {'id': 'g6', 'title': 'Child Portrait', 'medium': 'Pencil Sketch', 'size': '8×10 in',
+             'image': '/assets/images/gallery/art-18.jpeg', 'alt': 'Pencil sketch of a child', 'tag': ''},
+            {'id': 'g7', 'title': 'Grandparents Portrait', 'medium': 'Oil on Canvas', 'size': '18×24 in',
+             'image': '/assets/images/gallery/art-19.jpeg', 'alt': 'Oil painting of grandparents', 'tag': 'Heirloom'},
+            {'id': 'g8', 'title': 'Group Portrait', 'medium': 'Charcoal', 'size': '16×20 in',
+             'image': '/assets/images/gallery/art-20.jpeg', 'alt': 'Charcoal group portrait', 'tag': ''},
+            {'id': 'g9', 'title': 'Mother & Child', 'medium': 'Watercolour', 'size': '10×12 in',
+             'image': '/assets/images/gallery/art-21.jpeg', 'alt': 'Watercolour mother and child', 'tag': ''},
+        ]
+    },
+    'pricing': {
+        'medium_base_prices': {'watercolor': 2800, 'pencil': 1800, 'oil': 4500,
+                               'charcoal': 2200, 'digital': 1400, 'pastel': 3200},
+        'size_multipliers': {'A4': 1.0, 'A3': 1.45, 'A2': 2.1,
+                             '12x16': 1.35, '16x20': 1.85, '20x24': 2.4, '24x30': 3.2},
+        'frame_costs': {'none': 0, 'classic-wood': 1200, 'ornate-gold': 2200,
+                        'modern-black': 1500, 'floating': 1800},
+        'medium_days': {'watercolor': 7, 'pencil': 5, 'oil': 14,
+                        'charcoal': 5, 'digital': 3, 'pastel': 8},
+        'addon_prices': {'digital_copy': 299, 'certificate_of_authenticity': 499},
+        'gst_rate': 0.18,
+        'rush_delivery_surcharge': 0.35,
+    }
+}
+
+
+@api_router.get('/content/{section}')
+async def get_content(section: str):
+    """Public endpoint: returns CMS section content. Falls back to default if unset."""
+    if section not in DEFAULT_CMS_CONTENT:
+        raise HTTPException(status_code=404, detail='Unknown section')
+    doc = await db.site_content.find_one({'key': section}, {'_id': 0})
+    if doc and 'data' in doc:
+        return {'section': section, 'data': doc['data'], 'updated_at': doc.get('updated_at')}
+    return {'section': section, 'data': DEFAULT_CMS_CONTENT[section], 'updated_at': None}
+
+
+@api_router.put('/admin/content/{section}')
+async def put_content(section: str, request: Request):
+    """Admin: overwrite CMS section content."""
+    await require_admin(request)
+    if section not in DEFAULT_CMS_CONTENT:
+        raise HTTPException(status_code=404, detail='Unknown section')
+    body = await request.json()
+    data = body.get('data')
+    if data is None:
+        raise HTTPException(status_code=400, detail='Missing data')
+    now = datetime.now(timezone.utc)
+    await db.site_content.update_one(
+        {'key': section},
+        {'$set': {'key': section, 'data': data, 'updated_at': now}},
+        upsert=True,
+    )
+    return {'section': section, 'data': data, 'updated_at': now.isoformat()}
+
+
+@api_router.post('/admin/content/{section}/reset')
+async def reset_content(section: str, request: Request):
+    """Admin: reset section to default."""
+    await require_admin(request)
+    if section not in DEFAULT_CMS_CONTENT:
+        raise HTTPException(status_code=404, detail='Unknown section')
+    await db.site_content.delete_one({'key': section})
+    return {'section': section, 'data': DEFAULT_CMS_CONTENT[section], 'reset': True}
+
+
+@api_router.post('/admin/cms-image')
+async def upload_cms_image(request: Request):
+    """Admin: store base64 image, return URL to serve it."""
+    await require_admin(request)
+    body = await request.json()
+    data_url: str = body.get('data') or ''
+    if not data_url.startswith('data:'):
+        raise HTTPException(status_code=400, detail='Expected base64 data URL')
+    image_id = uuid.uuid4().hex
+    await db.cms_images.insert_one({
+        'image_id': image_id, 'data': data_url,
+        'uploaded_at': datetime.now(timezone.utc),
+    })
+    return {'image_id': image_id, 'url': f'/api/cms-image/{image_id}'}
+
+
+@api_router.get('/cms-image/{image_id}')
+async def get_cms_image(image_id: str):
+    doc = await db.cms_images.find_one({'image_id': image_id}, {'_id': 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail='Image not found')
+    data_url = doc['data']
+    try:
+        header, b64 = data_url.split(',', 1)
+        mime = header.split(';')[0].replace('data:', '') or 'image/jpeg'
+        raw = base64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=400, detail='Corrupt image')
+    return Response(content=raw, media_type=mime, headers={'Cache-Control': 'public, max-age=86400'})
+
+
 @api_router.get('/chat/image/{image_id}')
 async def chat_image(image_id: str):
     doc = await db.chat_uploads.find_one({'image_id': image_id}, {'_id': 0})

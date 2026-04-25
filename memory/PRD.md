@@ -46,3 +46,28 @@
 
 ## Cashfree (live keys)
 - PROD App ID + Secret wired. `CASHFREE_MODE=PROD`. `/api/payments/cashfree/create` confirmed returning real `payment_session_id`. Webhook URL pending setup in Cashfree dashboard.
+
+## Admin CMS / Listings (25 Apr 2026)
+- New self-serve content manager at **`/admin/listings`** (admin only).
+- Tabs: **Mediums**, **Hero**, **Gallery**, **Pricing** — all editable without redeploy.
+- Backend collection: `site_content` (key-based docs, falls back to defaults if unset)
+  and `cms_images` (base64 stored, served via `/api/cms-image/{id}`).
+- New endpoints:
+  - `GET  /api/content/{section}` (public)
+  - `PUT  /api/admin/content/{section}` (admin)
+  - `POST /api/admin/content/{section}/reset` (admin)
+  - `POST /api/admin/cms-image` (admin) — accepts data-URL, returns `/api/cms-image/{id}`
+  - `GET  /api/cms-image/{id}` (public)
+- Frontend: `MediumShowcase`, `HeroSection`, and `gallery/page.tsx` now fetch CMS content
+  with hardcoded fallback (no breakage if API unreachable).
+- Auth: uses existing Emergent Google login; `ADMIN_EMAILS=riddhijain0119@gmail.com`.
+
+## Backlog / Next Steps (updated 25 Apr 2026)
+- P0: Update `/app/frontend/src/app/project-review-portal/components/ReviewPortal.tsx`
+  timeline to "Order Received → In Production → Shipped → Delivered"
+  (deferred from previous session).
+- P1: Verify Resend domain `kalakritishop.in` (currently sending from `onboarding@resend.dev` sandbox).
+- P1: User to whitelist preview/prod domain in Cashfree dashboard.
+- P2: Wire portrait-configurator / pricing engine to `/api/content/pricing` so admin price edits flow through.
+- P2: Pre-existing syntax error in `LivePricePanel.tsx` (configurator) blocks `/portrait-configurator` build — needs cleanup.
+- P2: Delete unused `WhatsAppFloatingButton.tsx`.
