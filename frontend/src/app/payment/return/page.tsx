@@ -1,12 +1,12 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api, Order } from '@/lib/api';
 import Link from 'next/link';
 import AppLogo from '@/components/ui/AppLogo';
 import { CheckCircle2, Clock, XCircle, Package } from 'lucide-react';
 
-export default function PaymentReturnPage() {
+function PaymentReturnContent() {
   const sp = useSearchParams();
   const router = useRouter();
   const orderId = sp.get('order_id') || '';
@@ -73,5 +73,13 @@ export default function PaymentReturnPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function PaymentReturnPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#FAF6F0] py-10 px-6"><div className="max-w-2xl mx-auto text-center text-[#9C8878]">Loading…</div></main>}>
+      <PaymentReturnContent />
+    </Suspense>
   );
 }

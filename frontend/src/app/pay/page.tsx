@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, API_BASE } from '@/lib/api';
 import Link from 'next/link';
@@ -22,7 +22,7 @@ const loadCashfreeSDK = () =>
     document.head.appendChild(s);
   });
 
-export default function AIPayPage() {
+function AIPayContent() {
   const router = useRouter();
   const params = useSearchParams();
   const orderId = params.get('order_id') || '';
@@ -239,6 +239,14 @@ export default function AIPayPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AIPayPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center text-[#9C8878] font-body text-sm">Loading…</div>}>
+      <AIPayContent />
+    </Suspense>
   );
 }
 

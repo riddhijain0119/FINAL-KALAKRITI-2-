@@ -82,3 +82,20 @@
 - P1: User to whitelist preview/prod domain in Cashfree dashboard.
 - P2: Wire portrait-configurator / pricing engine to `/api/content/pricing` so admin price edits flow through.
 - P2: Delete unused `WhatsAppFloatingButton.tsx` and `RevisionThread.tsx`.
+
+
+## Deployment Build Fix (06 Feb 2026)
+- Wrapped `useSearchParams()` consumers in `<Suspense>` boundary to satisfy Next.js 15 strict CSR-bailout rule:
+  - `/app/frontend/src/app/payment/return/page.tsx`
+  - `/app/frontend/src/app/pay/page.tsx`
+  - `/app/frontend/src/app/track-order/page.tsx`
+- Pattern: inner `*Content()` component holds the existing logic; default export wraps it in `<Suspense>` with a brand-aligned loading fallback.
+- Verified: `cd /app/frontend && yarn build` → exit 0, all 20 routes prerendered statically (17.28s).
+- Deployment is now unblocked — user can hit "Deploy" on Emergent.
+
+## Backlog / Next Steps (updated 06 Feb 2026)
+- P0 ✅ DONE: Suspense fix for Next.js production build.
+- P1: Abandoned-payment recovery (auto banner + email if order unpaid > 30 min).
+- P2: Customer self-service review upload at `/my-orders` (photos + 5-star rating).
+- P3: CSV order export from admin panel.
+- ⚪ Deferred: `server.py` complexity refactor — intentionally untouched to avoid regression on revenue-critical paths.

@@ -92,3 +92,4 @@ credentials.json
 *.pem
 *.key
 .credentials
+frontend/.next/cache/webpack/client-production/9.pack

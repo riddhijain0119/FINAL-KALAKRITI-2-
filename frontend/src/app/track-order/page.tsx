@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api, Order } from '@/lib/api';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ const ICONS: Record<string, any> = {
   Placed: Clock, Confirmed: CheckCircle2, 'In Production': Paintbrush, Shipped: Truck, 'Out for Delivery': Truck, Delivered: Package,
 };
 
-export default function TrackOrderPage() {
+function TrackOrderContent() {
   const sp = useSearchParams();
   const [orderId, setOrderId] = useState(sp.get('order_id') || '');
   const [email, setEmail] = useState('');
@@ -119,5 +119,13 @@ export default function TrackOrderPage() {
       </div>
       
     </main>
+  );
+}
+
+export default function TrackOrderPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#FAF6F0] py-10 px-6"><div className="max-w-3xl mx-auto text-center text-[#9C8878]">Loading…</div></main>}>
+      <TrackOrderContent />
+    </Suspense>
   );
 }
