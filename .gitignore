@@ -90,3 +90,12 @@ credentials.json
 *.key
 .credentials
 frontend/.next/cache/webpack/client-production/9.pack
+-e 
+# Environment and credential files
+.env
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
